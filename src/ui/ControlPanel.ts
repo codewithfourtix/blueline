@@ -13,6 +13,7 @@ export interface OverlayObjects {
   occupancy: THREE.Object3D;
   tracks: THREE.Object3D;
   sensor: THREE.Object3D;
+  buildings: THREE.Object3D;
 }
 
 const SCENARIOS: { id: ScenarioName; label: string }[] = [
@@ -52,6 +53,7 @@ export class ControlPanel {
           <input type="range" id="c-traffic" min="0" max="40" step="1" />
         </div>
 
+        <div class="toggle-row"><span>City buildings</span><div class="switch on" id="c-build"><div class="knob"></div></div></div>
         <div class="toggle-row"><span>Perception (Kalman)</span><div class="switch on" id="c-percept"><div class="knob"></div></div></div>
         <div class="toggle-row"><span>Sensor range</span><div class="switch on" id="c-sensor"><div class="knob"></div></div></div>
         <div class="toggle-row"><span>Track boxes</span><div class="switch on" id="c-tracks"><div class="knob"></div></div></div>
@@ -125,6 +127,7 @@ export class ControlPanel {
   }
 
   private wireToggles(): void {
+    this.toggle("c-build", true, (on) => (this.overlays.buildings.visible = on));
     this.toggle("c-percept", true, (on) => (this.sim.usePerception = on));
     this.toggle("c-sensor", true, (on) => (this.overlays.sensor.visible = on));
     this.toggle("c-tracks", true, (on) => (this.overlays.tracks.visible = on));
