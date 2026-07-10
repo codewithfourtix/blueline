@@ -22,7 +22,7 @@ export interface SensorConfig {
 }
 
 export const DEFAULT_SENSOR: SensorConfig = {
-  range: 70,
+  range: 95,
   posNoise: 0.35,
   sizeNoise: 0.15,
   occlusion: true,

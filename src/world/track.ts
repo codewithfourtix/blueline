@@ -8,26 +8,23 @@ export interface TrackDef {
   controlPoints: [number, number][];
 }
 
-// A flowing circuit: long sweepers, a hairpin-ish tightening, and an S-bend so
-// the Frenet planner has genuinely curved geometry to solve (not just a ring).
+// A large, smooth highway loop generated as an ellipse. Evenly-spaced points
+// mean the Catmull-Rom spline has gentle, uniform curvature everywhere (no tight
+// kinks), so the ego can comfortably hold its lane at speed. Big semi-axes keep
+// the minimum radius large (~150 m).
+function ellipseLoop(a: number, b: number, n: number): [number, number][] {
+  const pts: [number, number][] = [];
+  for (let i = 0; i < n; i++) {
+    const t = (i / n) * Math.PI * 2;
+    pts.push([a * Math.cos(t), b * Math.sin(t)]);
+  }
+  return pts;
+}
+
 export const CIRCUIT: TrackDef = {
   id: "circuit",
-  name: "Circuit",
-  controlPoints: [
-    [0, 0],
-    [140, -10],
-    [250, 20],
-    [320, 110],
-    [300, 210],
-    [220, 250],
-    [120, 235],
-    [60, 275],
-    [-40, 300],
-    [-140, 250],
-    [-170, 150],
-    [-120, 60],
-    [-40, 40],
-  ],
+  name: "Highway Loop",
+  controlPoints: ellipseLoop(400, 260, 32),
 };
 
 export const DEFAULT_TRACK = CIRCUIT;
