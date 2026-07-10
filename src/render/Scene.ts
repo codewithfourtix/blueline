@@ -37,8 +37,8 @@ export class Scene {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
 
-    this.scene.background = new THREE.Color(THEME.background);
-    this.scene.fog = new THREE.Fog(THEME.fog, 70, 340);
+    this.scene.background = this.makeGradientBackground();
+    this.scene.fog = new THREE.Fog(THEME.fog, 80, 360);
 
     this.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 2000);
     this.camera.position.copy(this.camPos);
@@ -59,6 +59,24 @@ export class Scene {
     this.composer.addPass(new OutputPass());
 
     window.addEventListener("resize", () => this.onResize());
+  }
+
+  /** Vertical navy gradient background — the Tesla "sky", never pure black. */
+  private makeGradientBackground(): THREE.Texture {
+    const canvas = document.createElement("canvas");
+    canvas.width = 4;
+    canvas.height = 512;
+    const ctx = canvas.getContext("2d")!;
+    const g = ctx.createLinearGradient(0, 0, 0, 512);
+    const hex = (c: number) => `#${c.toString(16).padStart(6, "0")}`;
+    g.addColorStop(0.0, hex(THEME.bgTop));
+    g.addColorStop(0.62, hex(THEME.background));
+    g.addColorStop(1.0, hex(THEME.bgHorizon));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 4, 512);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
   }
 
   private setupLights(): void {
@@ -86,7 +104,7 @@ export class Scene {
     // A faint grid over the terrain gives motion & depth cues; fog fades it out.
     const grid = new THREE.GridHelper(6000, 300, THEME.grid, THEME.grid);
     (grid.material as THREE.Material).transparent = true;
-    (grid.material as THREE.Material).opacity = 0.4;
+    (grid.material as THREE.Material).opacity = 0.55;
     grid.position.y = -0.04;
     this.scene.add(grid);
   }

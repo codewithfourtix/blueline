@@ -17,8 +17,7 @@ export class OccupancyView {
     const mat = new THREE.MeshBasicMaterial({
       color: THEME.egoBlue,
       transparent: true,
-      opacity: 0.16,
-      blending: THREE.AdditiveBlending,
+      opacity: 0.11,
       depthWrite: false,
     });
     this.object = new THREE.InstancedMesh(geo, mat, max);

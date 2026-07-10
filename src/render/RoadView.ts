@@ -33,8 +33,8 @@ export class RoadView {
         asphalt,
         new THREE.MeshStandardMaterial({
           color: THEME.asphalt,
-          roughness: 0.62,
-          metalness: 0.22,
+          roughness: 0.85,
+          metalness: 0.04,
         }),
       ),
     );
