@@ -51,9 +51,9 @@ export class Scene {
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     const bloom = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.9, // strength
-      0.6, // radius
-      0.85, // threshold — only bright (blue/emissive) things bloom
+      0.5, // strength — subtle glow, keep lane lines crisp not blown out
+      0.5, // radius
+      0.9, // threshold — only the brightest (emissive) things bloom
     );
     this.composer.addPass(bloom);
     this.composer.addPass(new OutputPass());

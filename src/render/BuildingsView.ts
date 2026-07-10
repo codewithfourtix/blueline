@@ -28,20 +28,20 @@ export class BuildingsView {
     const L = path.length;
     const slots: Slot[] = [];
 
-    const spacing = 26;
+    const spacing = 30;
     const edge = road.totalWidth / 2 + 6; // clear of shoulder + posts
     const rand = Math.random;
 
     for (let s = 0; s < L; s += spacing) {
       for (const side of [-1, 1]) {
-        if (rand() < 0.22) continue; // occasional gaps → not a solid wall
+        if (rand() < 0.25) continue; // occasional gaps → not a solid wall
         const jitterS = (rand() - 0.5) * spacing * 0.7;
-        const lateral = edge + 4 + rand() * 42; // 10–56 m off the road edge
-        const w = 8 + rand() * 16;
-        const depth = 8 + rand() * 16;
+        const lateral = edge + 16 + rand() * 55; // 22–77 m off the road edge
+        const w = 7 + rand() * 14;
+        const depth = 7 + rand() * 14;
         // Height weighted toward low-rise, with the occasional tower.
         const t = rand();
-        const h = 6 + t * t * t * 78;
+        const h = 7 + t * t * t * 58;
 
         const p = path.toCartesian(s + jitterS, side * lateral);
         const heading = path.cartesianAt(s + jitterS).heading + (rand() - 0.5) * 0.5;

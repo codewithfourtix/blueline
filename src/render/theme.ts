@@ -10,13 +10,13 @@ export const THEME = {
   bgHorizon: 0x243650,
   background: 0x141d2b,
   fog: 0x1c2942,
-  ground: 0x1e2a3d,
-  grid: 0x33465f,
+  ground: 0x172231,
+  grid: 0x2f4058,
 
   // Road — a distinctly LIGHTER neutral grey that reads against the blue world.
-  asphalt: 0x4a505b,
+  asphalt: 0x6b7280,
   asphaltEdge: 0x3c414b,
-  shoulder: 0x2c3444,
+  shoulder: 0x2a3446,
   laneLine: 0xe2e8f1,
   edgeLine: 0xf2f5fa,
   delineator: 0x6fd0ff,
