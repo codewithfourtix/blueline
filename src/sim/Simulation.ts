@@ -18,6 +18,9 @@ import { purePursuitSteer, PurePursuitConfig } from "../control/PurePursuit.ts";
 import { TrafficManager } from "../traffic/TrafficManager.ts";
 import { FrenetPlanner } from "../planner/FrenetPlanner.ts";
 import { FrenetState, Obstacle, Trajectory } from "../planner/Trajectory.ts";
+import { Sensor } from "../perception/Sensor.ts";
+import { Tracker, Track } from "../perception/Tracker.ts";
+import { OccupancyGrid } from "../perception/OccupancyGrid.ts";
 import { clamp, wrapAngle } from "../core/math.ts";
 import { DEFAULT_SIM, SimConfig } from "./config.ts";
 
@@ -33,6 +36,9 @@ export interface Telemetry {
   steer: number;
   accel: number;
   distanceTravelled: number; // m
+  trackedCount: number; // confirmed Kalman tracks
+  sensorRange: number;
+  usePerception: boolean;
 }
 
 export class Simulation {
@@ -42,12 +48,18 @@ export class Simulation {
   readonly ego: Vehicle;
   readonly traffic: TrafficManager;
   readonly planner: FrenetPlanner;
+  readonly sensor: Sensor;
+  readonly tracker: Tracker;
+  readonly occupancy: OccupancyGrid;
 
   plan: Trajectory | null = null;
   candidates: Trajectory[] = [];
+  tracks: Track[] = [];
   telemetry: Telemetry;
   paused = false;
   showCandidates = true;
+  /** When true the planner drives off Kalman tracks; when false, ground truth. */
+  usePerception = true;
 
   private speedPID: PID;
   private ppConfig: PurePursuitConfig;
@@ -75,6 +87,10 @@ export class Simulation {
       desiredSpeed: this.config.egoDesiredSpeed,
     });
 
+    this.sensor = new Sensor(this.path);
+    this.tracker = new Tracker();
+    this.occupancy = new OccupancyGrid(50, 2);
+
     this.speedPID = new PID(1.2, 0.15, 0.05, -this.ego.maxDecel, this.ego.maxAccel);
     this.ppConfig = {
       wheelbase: EGO_DIMS.wheelbase,
@@ -96,9 +112,13 @@ export class Simulation {
       steer: 0,
       accel: 0,
       distanceTravelled: 0,
+      trackedCount: 0,
+      sensorRange: this.sensor.config.range,
+      usePerception: this.usePerception,
     };
 
-    // Prime the first plan so control has something to follow on frame 1.
+    // Prime perception + the first plan so control has something on frame 1.
+    this.perceive(this.config.fixedDt);
     this.replan();
   }
 
@@ -124,7 +144,14 @@ export class Simulation {
     this.distance = 0;
     this.lastEgoIndex = -1;
     this.traffic.spawn(this.config.trafficCount);
+    this.tracker.reset();
+    this.tracks = [];
+    this.perceive(this.config.fixedDt);
     this.replan();
+  }
+
+  setSensorRange(r: number): void {
+    this.sensor.config.range = r;
   }
 
   /** Current ego state expressed in the road's Frenet frame. */
@@ -146,14 +173,28 @@ export class Simulation {
     };
   }
 
+  /** Obstacles the planner reasons about — perceived tracks or ground truth. */
   private obstacles(): Obstacle[] {
-    return this.traffic.cars.map((c) => ({
-      s: c.s,
-      d: c.d,
-      v: c.v,
-      length: c.length,
-      width: c.width,
-    }));
+    if (!this.usePerception) {
+      return this.traffic.cars.map((c) => ({
+        s: c.s, d: c.d, v: c.v, length: c.length, width: c.width,
+      }));
+    }
+    // Project each confirmed Kalman track into the road's Frenet frame, using
+    // its ESTIMATED velocity for the along-road speed (real prediction).
+    return this.tracks.map((t) => {
+      const f = this.path.toFrenet(t.px, t.py);
+      const h = this.path.cartesianAt(f.s).heading;
+      const vAlong = t.vx * Math.cos(h) + t.vy * Math.sin(h);
+      return { s: f.s, d: f.d, v: vAlong, length: t.length, width: t.width };
+    });
+  }
+
+  /** Run the perception pipeline: sensor → tracker → occupancy grid. */
+  private perceive(dt: number): void {
+    const detections = this.sensor.sense(this.ego.x, this.ego.y, this.traffic.cars);
+    this.tracks = this.tracker.update(detections, dt);
+    this.occupancy.build(this.ego.x, this.ego.y, this.tracks);
   }
 
   private replan(): void {
@@ -169,6 +210,9 @@ export class Simulation {
   /** Advance the simulation by one fixed step. */
   step(dt: number): void {
     if (this.paused) return;
+
+    // --- perception (every step: sensor → Kalman tracks → occupancy) -------
+    this.perceive(dt);
 
     // --- planning (rate-limited) -------------------------------------------
     this.planTimer += dt;
@@ -211,6 +255,9 @@ export class Simulation {
     this.telemetry.steer = this.ego.delta;
     this.telemetry.accel = this.ego.a;
     this.telemetry.distanceTravelled = this.distance;
+    this.telemetry.trackedCount = this.tracks.length;
+    this.telemetry.sensorRange = this.sensor.config.range;
+    this.telemetry.usePerception = this.usePerception;
   }
 }
 
