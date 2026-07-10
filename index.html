@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#0a0e14" />
+    <title>Blueline — Autonomous Driving Simulator</title>
+    <meta
+      name="description"
+      content="A browser self-driving simulator running a real AV stack: Frenet lattice planner, IDM/MOBIL traffic, Pure Pursuit + PID control, behind a Tesla-style visualization."
+    />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene"></canvas>
+      <div id="ui"></div>
+      <div id="loading">
+        <div class="loading-inner">
+          <div class="loading-mark">BLUELINE</div>
+          <div class="loading-sub">initializing autonomy stack…</div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

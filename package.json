@@ -1,0 +1,21 @@
+{
+  "name": "blueline",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Blueline — a browser self-driving simulator running a real autonomous-vehicle stack (Frenet lattice planner, IDM/MOBIL traffic, Pure Pursuit + PID control) behind a Tesla-style visualization.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "three": "^0.161.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.161.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11"
+  }
+}
