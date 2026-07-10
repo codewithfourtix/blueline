@@ -39,20 +39,20 @@ export class RoadView {
       ),
     );
 
-    // Solid outer edge lines.
+    // Solid outer edge lines — bright, clearly wider so the road edge is obvious.
     for (const sign of [-1, 1]) {
-      const edge = ribbon(path, sign * halfW, 0.16, 0.035, false);
+      const edge = ribbon(path, sign * halfW, 0.24, 0.05, false);
       this.group.add(
-        new THREE.Mesh(edge, new THREE.MeshBasicMaterial({ color: THEME.edgeLine })),
+        new THREE.Mesh(edge, new THREE.MeshBasicMaterial({ color: 0xffffff })),
       );
     }
 
-    // Dashed interior lane dividers.
+    // Dashed interior lane dividers — crisp white, evenly spaced.
     for (let i = 0; i < road.numLanes - 1; i++) {
       const dOff = road.laneCenter(i) + road.laneWidth / 2;
-      const divider = ribbon(path, dOff, 0.11, 0.035, true, 3.0, 5.0);
+      const divider = ribbon(path, dOff, 0.17, 0.05, true, 4.0, 6.0);
       this.group.add(
-        new THREE.Mesh(divider, new THREE.MeshBasicMaterial({ color: THEME.laneLine })),
+        new THREE.Mesh(divider, new THREE.MeshBasicMaterial({ color: 0xf2f6fc })),
       );
     }
 
