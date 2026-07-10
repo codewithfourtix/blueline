@@ -9,8 +9,8 @@ visualisation. The ego car perceives surrounding traffic, predicts where it's
 going, plans an optimal path in real time (the glowing **blue line**), and
 steers + brakes itself to follow it. All at 60 FPS, entirely client-side.
 
-> **Live demo:** enable GitHub Pages for this repo (Settings → Pages → Source:
-> _GitHub Actions_) and it deploys automatically → `https://codewithfourtix.github.io/blueline/`
+> **Deploy:** it's a static site — `npm run build` produces `dist/`, which drops
+> straight onto any static host (Vercel, Netlify, Cloudflare Pages, S3, …).
 
 ---
 
