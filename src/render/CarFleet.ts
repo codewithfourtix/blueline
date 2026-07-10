@@ -98,13 +98,23 @@ export class CarFleet {
       const relevant = ds > 0 && ds < 30 && dd < 4;
       const t = relevant ? clamp(1 - ds / 30, 0, 1) : 0;
       const mats = mesh.userData.materials as THREE.MeshStandardMaterial[];
-      const base = new THREE.Color(THEME.trafficBody);
-      const alert = new THREE.Color(THEME.trafficAlert);
-      const col = base.clone().lerp(alert, t * 0.7);
-      for (const mat of mats) {
-        mat.color.copy(col);
-        mat.emissive.copy(alert);
-        mat.emissiveIntensity = t * 0.5;
+      if (c.kind === "stalled") {
+        // A hazard: steady amber glow regardless of distance.
+        const amber = new THREE.Color(0xffb020);
+        for (const mat of mats) {
+          mat.color.copy(amber);
+          mat.emissive.copy(amber);
+          mat.emissiveIntensity = 0.6;
+        }
+      } else {
+        const base = new THREE.Color(c.kind === "truck" ? THEME.trafficBodyDim : THEME.trafficBody);
+        const alert = new THREE.Color(THEME.trafficAlert);
+        const col = base.clone().lerp(alert, t * 0.7);
+        for (const mat of mats) {
+          mat.color.copy(col);
+          mat.emissive.copy(alert);
+          mat.emissiveIntensity = t * 0.5;
+        }
       }
     }
   }
