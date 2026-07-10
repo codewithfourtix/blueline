@@ -11,6 +11,8 @@ import { mod, smoothTowards, clamp } from "../core/math.ts";
 import { DEFAULT_IDM, IDMParams, idmAcceleration } from "./IDM.ts";
 import { DEFAULT_MOBIL, MobilParams, mobilShouldChange, Neighbor } from "./MOBIL.ts";
 
+export type CarKind = "car" | "truck" | "stalled";
+
 export interface TrafficCar {
   id: number;
   s: number; // station along the loop
@@ -22,7 +24,12 @@ export interface TrafficCar {
   width: number;
   changeCooldown: number; // seconds until it may consider another lane change
   hue: number; // stable per-car colour seed for the renderer
+  kind: CarKind;
+  cutInTimer: number; // >0: a scripted cut-in is pending (scenario use)
+  cutInLane: number; // lane the cut-in car will swerve into
 }
+
+export type ScenarioName = "highway" | "dense" | "trucks" | "stalled" | "cutin";
 
 export interface EgoSnapshot {
   s: number;
@@ -74,19 +81,74 @@ export class TrafficManager {
       }
       if (!ok) continue;
       const desired = 15 + rand() * 12; // 15–27 m/s ≈ 54–97 km/h
-      this.cars.push({
-        id: this.nextId++,
-        s,
-        d: this.road.laneCenter(lane),
-        v: desired * (0.6 + 0.4 * rand()),
-        lane,
-        desiredSpeed: desired,
-        length: 4.4 + rand() * 0.8,
-        width: 1.9,
-        changeCooldown: rand() * 3,
-        hue: rand(),
-      });
+      this.cars.push(
+        this.make(lane, s, desired * (0.6 + 0.4 * rand()), desired, 4.4 + rand() * 0.8, 1.9, "car"),
+      );
       placed++;
+    }
+  }
+
+  private make(
+    lane: number,
+    s: number,
+    v: number,
+    desiredSpeed: number,
+    length: number,
+    width: number,
+    kind: CarKind,
+  ): TrafficCar {
+    return {
+      id: this.nextId++,
+      s,
+      d: this.road.laneCenter(lane),
+      v,
+      lane,
+      desiredSpeed,
+      length,
+      width,
+      changeCooldown: Math.random() * 3,
+      hue: Math.random(),
+      kind,
+      cutInTimer: -1,
+      cutInLane: lane,
+    };
+  }
+
+  /** Set up a named demo scenario. `egoLane` is the ego's starting lane. */
+  spawnScenario(name: ScenarioName, egoLane: number): void {
+    const L = this.road.path.length;
+    switch (name) {
+      case "highway":
+        this.spawn(16);
+        break;
+      case "dense":
+        this.spawn(30);
+        break;
+      case "trucks": {
+        this.spawn(10);
+        // A convoy of slow trucks in the right lanes for the ego to overtake.
+        for (let i = 0; i < 4; i++) {
+          const s = 60 + i * 55;
+          this.cars.push(this.make(0, s % L, 12, 13, 9 + i, 2.4, "truck"));
+        }
+        break;
+      }
+      case "stalled": {
+        this.spawn(12);
+        // A dead-stopped car directly in the ego's path — must be perceived & avoided.
+        this.cars.push(this.make(egoLane, 95, 0, 0, 4.6, 1.95, "stalled"));
+        break;
+      }
+      case "cutin": {
+        this.spawn(12);
+        // An aggressive car one lane over that swerves into the ego's lane.
+        const from = egoLane + 1 < this.road.numLanes ? egoLane + 1 : egoLane - 1;
+        const car = this.make(from, 42, 20, 22, 4.6, 1.95, "car");
+        car.cutInTimer = 2.6;
+        car.cutInLane = egoLane;
+        this.cars.push(car);
+        break;
+      }
     }
   }
 
@@ -115,6 +177,20 @@ export class TrafficManager {
 
     // --- Longitudinal (IDM) + lane-change (MOBIL) decisions -----------------
     for (const c of this.cars) {
+      // Stalled cars are inert obstacles.
+      if (c.kind === "stalled") {
+        c.v = 0;
+        continue;
+      }
+      // Scripted cut-in: after the timer expires, force the swerve.
+      if (c.cutInTimer > 0) {
+        c.cutInTimer -= dt;
+        if (c.cutInTimer <= 0) {
+          c.lane = c.cutInLane;
+          c.changeCooldown = 5;
+        }
+      }
+
       const idmForCar: IDMParams = { ...this.idm, v0: c.desiredSpeed };
 
       const lead = this.lead(lanes[c.lane], c.s, c.length);
