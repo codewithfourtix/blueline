@@ -15,45 +15,34 @@ export class RoadView {
     const path = road.path;
     const halfW = road.totalWidth / 2;
 
+    // Helper for flat, unlit, always-visible road paint (DoubleSide defeats any
+    // back-face culling; toneMapped:false keeps the true colour under ACES).
+    const flat = (color: number) =>
+      new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, toneMapped: false });
+
     // Soft shoulders just outside the road, to frame the asphalt.
     for (const sign of [-1, 1]) {
-      const shoulder = ribbon(path, sign * (halfW + 1.3), 1.4, 0.012, false);
-      this.group.add(
-        new THREE.Mesh(
-          shoulder,
-          new THREE.MeshStandardMaterial({ color: THEME.shoulder, roughness: 1, metalness: 0 }),
-        ),
-      );
+      const shoulder = ribbon(path, sign * (halfW + 1.3), 1.4, 0.015, false);
+      this.group.add(new THREE.Mesh(shoulder, flat(THEME.shoulder)));
     }
 
-    // Asphalt surface — lighter than the ground, with a faint wet-night sheen.
+    // Asphalt surface — a flat, guaranteed-visible grey clearly lighter than the
+    // ground. Unlit so it never falls into shadow (a ground-facing lit ribbon
+    // gets no light from above), which is what made the road disappear.
     const asphalt = ribbon(path, 0, halfW, 0.02, false);
-    this.group.add(
-      new THREE.Mesh(
-        asphalt,
-        new THREE.MeshStandardMaterial({
-          color: THEME.asphalt,
-          roughness: 0.85,
-          metalness: 0.04,
-        }),
-      ),
-    );
+    this.group.add(new THREE.Mesh(asphalt, flat(THEME.asphalt)));
 
     // Solid outer edge lines — bright, clearly wider so the road edge is obvious.
     for (const sign of [-1, 1]) {
       const edge = ribbon(path, sign * halfW, 0.24, 0.05, false);
-      this.group.add(
-        new THREE.Mesh(edge, new THREE.MeshBasicMaterial({ color: 0xffffff })),
-      );
+      this.group.add(new THREE.Mesh(edge, flat(0xffffff)));
     }
 
     // Dashed interior lane dividers — crisp white, evenly spaced.
     for (let i = 0; i < road.numLanes - 1; i++) {
       const dOff = road.laneCenter(i) + road.laneWidth / 2;
-      const divider = ribbon(path, dOff, 0.17, 0.05, true, 4.0, 6.0);
-      this.group.add(
-        new THREE.Mesh(divider, new THREE.MeshBasicMaterial({ color: 0xf2f6fc })),
-      );
+      const divider = ribbon(path, dOff, 0.18, 0.06, true, 6.0, 5.0);
+      this.group.add(new THREE.Mesh(divider, flat(0xf2f6fc)));
     }
 
     // Glowing roadside delineator posts (blue on the left, amber on the right).
