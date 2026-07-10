@@ -15,12 +15,13 @@ import { DEFAULT_TRACK } from "../world/track.ts";
 import { Vehicle, EGO_DIMS } from "../vehicle/Vehicle.ts";
 import { PID } from "../control/PID.ts";
 import { purePursuitSteer, PurePursuitConfig } from "../control/PurePursuit.ts";
-import { TrafficManager } from "../traffic/TrafficManager.ts";
+import { TrafficManager, ScenarioName } from "../traffic/TrafficManager.ts";
 import { FrenetPlanner } from "../planner/FrenetPlanner.ts";
 import { FrenetState, Obstacle, Trajectory } from "../planner/Trajectory.ts";
 import { Sensor } from "../perception/Sensor.ts";
 import { Tracker, Track } from "../perception/Tracker.ts";
 import { OccupancyGrid } from "../perception/OccupancyGrid.ts";
+import { BehaviorPlanner, BehaviorState } from "../behavior/BehaviorPlanner.ts";
 import { clamp, wrapAngle } from "../core/math.ts";
 import { DEFAULT_SIM, SimConfig } from "./config.ts";
 
@@ -39,6 +40,7 @@ export interface Telemetry {
   trackedCount: number; // confirmed Kalman tracks
   sensorRange: number;
   usePerception: boolean;
+  behaviorState: BehaviorState;
 }
 
 export class Simulation {
@@ -51,6 +53,9 @@ export class Simulation {
   readonly sensor: Sensor;
   readonly tracker: Tracker;
   readonly occupancy: OccupancyGrid;
+  readonly behavior: BehaviorPlanner;
+  behaviorState: BehaviorState = "CRUISE";
+  private baseDesiredSpeed: number;
 
   plan: Trajectory | null = null;
   candidates: Trajectory[] = [];
@@ -60,6 +65,7 @@ export class Simulation {
   showCandidates = true;
   /** When true the planner drives off Kalman tracks; when false, ground truth. */
   usePerception = true;
+  scenario: ScenarioName = "highway";
 
   private speedPID: PID;
   private ppConfig: PurePursuitConfig;
@@ -90,6 +96,8 @@ export class Simulation {
     this.sensor = new Sensor(this.path);
     this.tracker = new Tracker();
     this.occupancy = new OccupancyGrid(50, 2);
+    this.behavior = new BehaviorPlanner(this.road);
+    this.baseDesiredSpeed = this.config.egoDesiredSpeed;
 
     this.speedPID = new PID(1.2, 0.15, 0.05, -this.ego.maxDecel, this.ego.maxAccel);
     this.ppConfig = {
@@ -115,6 +123,7 @@ export class Simulation {
       trackedCount: 0,
       sensorRange: this.sensor.config.range,
       usePerception: this.usePerception,
+      behaviorState: "CRUISE",
     };
 
     // Prime perception + the first plan so control has something on frame 1.
@@ -123,7 +132,7 @@ export class Simulation {
   }
 
   setDesiredSpeed(v: number): void {
-    this.planner.config.desiredSpeed = v;
+    this.baseDesiredSpeed = v;
     this.telemetry.desiredSpeed = v;
   }
 
@@ -143,11 +152,16 @@ export class Simulation {
     this.speedPID.reset();
     this.distance = 0;
     this.lastEgoIndex = -1;
-    this.traffic.spawn(this.config.trafficCount);
+    this.traffic.spawnScenario(this.scenario, mid);
     this.tracker.reset();
     this.tracks = [];
     this.perceive(this.config.fixedDt);
     this.replan();
+  }
+
+  setScenario(name: ScenarioName): void {
+    this.scenario = name;
+    this.reset();
   }
 
   setSensorRange(r: number): void {
@@ -200,8 +214,20 @@ export class Simulation {
   private replan(): void {
     const state = this.egoFrenet();
     const currentLane = this.road.laneOf(state.d);
+    const obstacles = this.obstacles();
+
+    // Behaviour FSM decides the manoeuvre; it modulates the motion planner.
+    const decision = this.behavior.decide(
+      { s: state.s, d: state.d, v: this.ego.v, lane: currentLane },
+      obstacles,
+      this.baseDesiredSpeed,
+    );
+    this.behaviorState = decision.state;
+    this.planner.config.desiredSpeed = decision.targetSpeed;
+    this.planner.config.kLaneChange = decision.kLaneChange;
+
     const t0 = performance.now();
-    const result = this.planner.plan(state, this.obstacles(), currentLane);
+    const result = this.planner.plan(state, obstacles, currentLane);
     this.lastPlanMs = performance.now() - t0;
     this.plan = result.best;
     this.candidates = result.candidates;
@@ -258,6 +284,7 @@ export class Simulation {
     this.telemetry.trackedCount = this.tracks.length;
     this.telemetry.sensorRange = this.sensor.config.range;
     this.telemetry.usePerception = this.usePerception;
+    this.telemetry.behaviorState = this.behaviorState;
   }
 }
 
