@@ -62,29 +62,29 @@ export class BehaviorPlanner {
     const closing = ego.v - lead.v;
     const ttc = closing > 0.1 ? gap / closing : Infinity;
 
-    // Emergency: tiny gap or very low time-to-collision.
-    if (gap < 5 || ttc < 1.6) {
+    const leadIsSlow = lead.v < baseSpeed - 1.0;
+    // React to a lead sooner the faster we're going.
+    const withinFollow = gap < Math.max(55, ego.v * 2.4);
+    const leftClear = ego.lane + 1 < this.road.numLanes && this.laneClear(ego, obstacles, ego.lane + 1, L);
+    const rightClear = ego.lane - 1 >= 0 && this.laneClear(ego, obstacles, ego.lane - 1, L);
+
+    // 1) A slow/blocking lead ahead and an open lane → GO AROUND it. Checked
+    //    before emergency so a stalled car doesn't just trap us in a dead stop.
+    if (leadIsSlow && withinFollow && (leftClear || rightClear)) {
+      return { state: "OVERTAKE", targetSpeed: baseSpeed, kLaneChange: 2.0 };
+    }
+
+    // 2) Boxed in and dangerously close → stop.
+    if (gap < 6 || ttc < 2.2) {
       return { state: "EMERGENCY", targetSpeed: 0, kLaneChange: 30 };
     }
 
-    const leadIsSlow = lead.v < baseSpeed - 1.0;
-    const withinFollow = gap < 48;
-
+    // 3) Slow lead, no open lane → adaptive-cruise follow.
     if (leadIsSlow && withinFollow) {
-      // Prefer to overtake if an adjacent lane is clear (left first, then right).
-      const left = ego.lane + 1;
-      const right = ego.lane - 1;
-      if (left < this.road.numLanes && this.laneClear(ego, obstacles, left, L)) {
-        return { state: "OVERTAKE", targetSpeed: baseSpeed, kLaneChange: 2.5 };
-      }
-      if (right >= 0 && this.laneClear(ego, obstacles, right, L)) {
-        return { state: "OVERTAKE", targetSpeed: baseSpeed, kLaneChange: 2.5 };
-      }
-      // Otherwise settle into adaptive-cruise following.
       return { state: "FOLLOW", targetSpeed: this.accSpeed(gap, lead.v, ego.v, baseSpeed), kLaneChange: 10 };
     }
 
-    // Lead present but fast/far enough — cruise, but don't tailgate.
+    // 4) Lead present but fast/far enough — cruise, but don't tailgate.
     const target = withinFollow ? Math.min(baseSpeed, this.accSpeed(gap, lead.v, ego.v, baseSpeed)) : baseSpeed;
     return { state: "CRUISE", targetSpeed: target, kLaneChange: 6 };
   }
@@ -103,8 +103,8 @@ export class BehaviorPlanner {
 
   /** Adaptive-cruise target speed for a given gap to a lead. */
   private accSpeed(gap: number, leadV: number, egoV: number, baseSpeed: number): number {
-    const desiredGap = 6 + 1.2 * egoV;
-    const target = leadV + (gap - desiredGap) * 0.4;
+    const desiredGap = 8 + 1.5 * egoV; // larger safe headway at speed
+    const target = leadV + (gap - desiredGap) * 0.35;
     return clamp(target, 0, baseSpeed);
   }
 }

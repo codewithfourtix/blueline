@@ -14,7 +14,7 @@ import { Road } from "../world/Road.ts";
 import { DEFAULT_TRACK } from "../world/track.ts";
 import { Vehicle, EGO_DIMS } from "../vehicle/Vehicle.ts";
 import { PID } from "../control/PID.ts";
-import { purePursuitSteer, PurePursuitConfig } from "../control/PurePursuit.ts";
+import { stanleyControl, StanleyConfig } from "../control/Stanley.ts";
 import { TrafficManager, ScenarioName } from "../traffic/TrafficManager.ts";
 import { FrenetPlanner } from "../planner/FrenetPlanner.ts";
 import { FrenetState, Obstacle, Trajectory } from "../planner/Trajectory.ts";
@@ -68,7 +68,7 @@ export class Simulation {
   scenario: ScenarioName = "highway";
 
   private speedPID: PID;
-  private ppConfig: PurePursuitConfig;
+  private steerConfig: StanleyConfig;
   private planTimer = 0;
   private lastEgoIndex = -1;
   private lastPlanMs = 0;
@@ -77,7 +77,7 @@ export class Simulation {
   constructor(config: Partial<SimConfig> = {}) {
     this.config = { ...DEFAULT_SIM, ...config };
 
-    this.path = new ReferencePath(DEFAULT_TRACK.controlPoints);
+    this.path = new ReferencePath(DEFAULT_TRACK.controlPoints, 40);
     this.road = new Road(this.path, this.config.numLanes, this.config.laneWidth);
 
     // Place the ego on the centre lane, aligned with the road.
@@ -100,11 +100,9 @@ export class Simulation {
     this.baseDesiredSpeed = this.config.egoDesiredSpeed;
 
     this.speedPID = new PID(1.2, 0.15, 0.05, -this.ego.maxDecel, this.ego.maxAccel);
-    this.ppConfig = {
-      wheelbase: EGO_DIMS.wheelbase,
-      gain: 0.6,
-      minLookahead: 5,
-      maxLookahead: 22,
+    this.steerConfig = {
+      k: 3.0, // cross-track gain
+      kSoft: 1.2,
       maxSteer: this.ego.maxSteer,
     };
 
@@ -170,7 +168,8 @@ export class Simulation {
 
   /** Current ego state expressed in the road's Frenet frame. */
   private egoFrenet(): FrenetState {
-    const f = this.path.toFrenet(this.ego.x, this.ego.y, this.lastEgoIndex);
+    // Full search (no hint) — cheap at 10 Hz and immune to hint drift on curves.
+    const f = this.path.toFrenet(this.ego.x, this.ego.y, -1);
     this.lastEgoIndex = f.index;
     const pathHeading = this.path.cartesianAt(f.s).heading;
     const yawErr = wrapAngle(this.ego.yaw - pathHeading);
@@ -223,7 +222,12 @@ export class Simulation {
       this.baseDesiredSpeed,
     );
     this.behaviorState = decision.state;
-    this.planner.config.desiredSpeed = decision.targetSpeed;
+    // Slow for road curvature (lateral-acceleration limit) so the car can
+    // actually hold its lane through bends instead of understeering wide.
+    const aLatMax = 2.2;
+    const k = this.path.maxCurvatureAhead(state.s, 100);
+    const curveCap = k > 1e-4 ? Math.sqrt(aLatMax / k) : Infinity;
+    this.planner.config.desiredSpeed = Math.max(6, Math.min(decision.targetSpeed, curveCap));
     this.planner.config.kLaneChange = decision.kLaneChange;
 
     const t0 = performance.now();
@@ -251,11 +255,17 @@ export class Simulation {
     let steer = 0;
     let targetSpeed = this.planner.config.desiredSpeed;
     if (this.plan && this.plan.points.length >= 2) {
-      steer = purePursuitSteer(
-        this.ego.x, this.ego.y, this.ego.yaw, this.ego.v,
-        this.plan.points,
-        this.ppConfig,
-      );
+      // Stanley lateral control tracking the TARGET LANE CENTRE in the road's
+      // Frenet frame (the plan chooses which lane + the speed; this holds it).
+      const wb = EGO_DIMS.wheelbase;
+      const fx = this.ego.x + (wb / 2) * Math.cos(this.ego.yaw);
+      const fy = this.ego.y + (wb / 2) * Math.sin(this.ego.yaw);
+      const ff = this.path.toFrenet(fx, fy, -1);
+      const targetLaneD = this.road.laneCenter(this.plan.targetLane);
+      const roadHeading = this.path.cartesianAt(ff.s).heading;
+      const headingErr = wrapAngle(roadHeading - this.ego.yaw);
+      const crossTrack = ff.d - targetLaneD; // +ve when ego is left of lane centre
+      steer = stanleyControl(headingErr, crossTrack, this.ego.v, this.steerConfig);
       // Target the planned speed ~0.8 s ahead for a responsive but smooth ACC.
       targetSpeed = speedAtTime(this.plan, 0.8);
     }
