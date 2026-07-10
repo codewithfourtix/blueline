@@ -1,21 +1,24 @@
-// Blueline visual language — a restrained, Tesla-inspired dark palette.
-// The whole look leans on: a near-black desaturated background, matte grey
-// vehicles that only gain colour when they matter, and one confident electric
-// blue reserved for the ego + its planned path (which then blooms).
+// Blueline visual language — modelled on the Tesla FSD screen.
+// The defining idea: a cool NAVY-BLUE world (never pure black), with a
+// distinctly LIGHTER neutral-grey road that pops against it, crisp white lane
+// lines, clean light-grey vehicles, and one confident electric blue reserved
+// for the ego + its planned path (which then blooms).
 
 export const THEME = {
-  // Scene
-  background: 0x090c12,
-  fog: 0x090c12,
-  ground: 0x0e141d,
-  grid: 0x1b2534,
+  // Scene — the background is a vertical gradient built in Scene.ts from these.
+  bgTop: 0x0e141e,
+  bgHorizon: 0x243650,
+  background: 0x141d2b,
+  fog: 0x1c2942,
+  ground: 0x1e2a3d,
+  grid: 0x33465f,
 
-  // Road — asphalt is deliberately LIGHTER than the ground so the ribbon reads.
-  asphalt: 0x2b303b,
-  asphaltEdge: 0x22262f,
-  shoulder: 0x1a1e26,
-  laneLine: 0x9aa6bd,
-  edgeLine: 0xd8dee8,
+  // Road — a distinctly LIGHTER neutral grey that reads against the blue world.
+  asphalt: 0x4a505b,
+  asphaltEdge: 0x3c414b,
+  shoulder: 0x2c3444,
+  laneLine: 0xe2e8f1,
+  edgeLine: 0xf2f5fa,
   delineator: 0x6fd0ff,
   delineatorWarm: 0xffb44d,
 
@@ -23,23 +26,23 @@ export const THEME = {
   egoBlue: 0x2e8bff,
   egoBlueBright: 0x5fb0ff,
   pathBlue: 0x2e8bff,
-  pathBlueFaint: 0x14385f,
+  pathBlueFaint: 0x1a4a7a,
 
-  // Traffic
-  trafficBody: 0x9aa6bd,
-  trafficBodyDim: 0x6d7891,
+  // Traffic — clean light grey, Tesla-style.
+  trafficBody: 0xc4ccd6,
+  trafficBodyDim: 0x9aa4b4,
   trafficAlert: 0xff5a5a,
 
   // Planner viz
-  candidate: 0x2a3550,
-  candidateColliding: 0x5c2230,
+  candidate: 0x35507a,
+  candidateColliding: 0x7a2f42,
 } as const;
 
 // CSS custom-property equivalents for the DOM HUD.
 export const CSS_VARS: Record<string, string> = {
-  "--bl-bg": "#0a0e14",
-  "--bl-panel": "rgba(16, 22, 33, 0.72)",
-  "--bl-panel-solid": "#10161f",
+  "--bl-bg": "#0e141e",
+  "--bl-panel": "rgba(18, 26, 40, 0.72)",
+  "--bl-panel-solid": "#121a28",
   "--bl-border": "rgba(90, 107, 140, 0.22)",
   "--bl-blue": "#2e8bff",
   "--bl-blue-bright": "#5fb0ff",
