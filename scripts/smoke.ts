@@ -20,6 +20,7 @@ let maxSpeed = -Infinity;
 let laneChanges = 0;
 let prevLane = sim.telemetry.lane;
 let everColliding = false;
+let maxTracked = 0;
 
 for (let i = 0; i < steps; i++) {
   sim.step(dt);
@@ -36,6 +37,10 @@ for (let i = 0; i < steps; i++) {
     prevLane = sim.telemetry.lane;
   }
   if (sim.telemetry.colliding) everColliding = true;
+  maxTracked = Math.max(maxTracked, sim.telemetry.trackedCount);
+  for (const t of sim.tracks) {
+    if (![t.px, t.py, t.vx, t.vy].every(Number.isFinite)) fail(`non-finite track ${t.id} at step ${i}`);
+  }
 
   // Traffic must stay finite too.
   for (const c of sim.traffic.cars) {
@@ -45,12 +50,14 @@ for (let i = 0; i < steps; i++) {
 
 const km = sim.telemetry.distanceTravelled / 1000;
 if (km < 0.2) fail(`ego barely moved: ${km.toFixed(3)} km in 50 s`);
+if (maxTracked < 1) fail("perception never produced a confirmed track");
 
 console.log("SMOKE PASS");
 console.log(`  distance travelled : ${km.toFixed(2)} km`);
 console.log(`  speed range        : ${minSpeed.toFixed(1)} – ${maxSpeed.toFixed(1)} m/s`);
 console.log(`  ego lane changes   : ${laneChanges}`);
 console.log(`  traffic cars       : ${sim.traffic.count}`);
+console.log(`  max Kalman tracks  : ${maxTracked}`);
 console.log(`  final plan cost    : ${sim.telemetry.planCost.toFixed(1)}`);
 console.log(`  plan time (last)   : ${sim.telemetry.planMs.toFixed(2)} ms`);
 console.log(`  hazard braking hit : ${everColliding ? "yes (reacted to traffic)" : "no"}`);
