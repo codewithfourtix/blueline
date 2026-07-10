@@ -33,8 +33,11 @@ export class HUD {
 
       <div class="telemetry panel">
         <h4>AUTONOMY TELEMETRY</h4>
+        <div class="trow"><span class="k">Behaviour</span><span class="v blue" id="t-behav">–</span></div>
         <div class="trow"><span class="k">Target speed</span><span class="v blue" id="t-target">–</span></div>
         <div class="trow"><span class="k">Lane</span><span class="v" id="t-lane">–</span></div>
+        <div class="trow"><span class="k">Tracked objects</span><span class="v" id="t-tracks">–</span></div>
+        <div class="trow"><span class="k">Sensor range</span><span class="v" id="t-sensor">–</span></div>
         <div class="trow"><span class="k">Acceleration</span><span class="v" id="t-accel">–</span></div>
         <div class="trow"><span class="k">Steering</span><span class="v" id="t-steer">–</span></div>
         <div class="trow"><span class="k">Candidates</span><span class="v" id="t-cand">–</span></div>
@@ -51,6 +54,9 @@ export class HUD {
     this.pill = document.getElementById("hud-pill")!;
     this.pillText = document.getElementById("hud-pill-text")!;
     this.rows = {
+      behav: document.getElementById("t-behav")!,
+      tracks: document.getElementById("t-tracks")!,
+      sensor: document.getElementById("t-sensor")!,
       target: document.getElementById("t-target")!,
       lane: document.getElementById("t-lane")!,
       accel: document.getElementById("t-accel")!,
@@ -65,14 +71,20 @@ export class HUD {
   update(t: Telemetry, laneCount: number): void {
     this.speedNum.textContent = Math.round(mps2kph(t.speed)).toString();
 
-    if (t.colliding) {
-      this.pill.classList.add("alert");
-      this.pillText.textContent = "HAZARD — BRAKING";
-    } else {
-      this.pill.classList.remove("alert");
-      this.pillText.textContent = "SELF-DRIVING";
-    }
+    const label: Record<string, string> = {
+      CRUISE: "SELF-DRIVING",
+      FOLLOW: "FOLLOWING",
+      OVERTAKE: "OVERTAKING",
+      EMERGENCY: "EMERGENCY STOP",
+    };
+    const emergency = t.behaviorState === "EMERGENCY";
+    this.pill.classList.toggle("alert", emergency);
+    this.pillText.textContent = label[t.behaviorState] ?? "SELF-DRIVING";
 
+    this.rows.behav.textContent = t.behaviorState;
+    this.rows.behav.classList.toggle("blue", !emergency);
+    this.rows.tracks.textContent = `${t.trackedCount}${t.usePerception ? "" : " (GT)"}`;
+    this.rows.sensor.textContent = `${Math.round(t.sensorRange)} m`;
     this.rows.target.textContent = `${Math.round(mps2kph(t.targetSpeed))} km/h`;
     this.rows.lane.textContent = `${t.lane + 1} / ${laneCount}`;
     this.rows.accel.textContent = `${t.accel >= 0 ? "+" : ""}${t.accel.toFixed(1)} m/s²`;

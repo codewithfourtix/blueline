@@ -219,9 +219,20 @@ input[type="range"]::-moz-range-thumb {
   background: var(--bl-blue);
   cursor: pointer;
 }
+.controls {
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
 .btn-row {
   display: flex;
   gap: 8px;
+}
+.btn-row.wrap {
+  flex-wrap: wrap;
+}
+button.bl.scn {
+  flex: 0 0 auto;
+  padding: 7px 11px;
 }
 button.bl {
   flex: 1;
