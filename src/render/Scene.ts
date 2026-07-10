@@ -38,7 +38,7 @@ export class Scene {
     this.renderer.toneMappingExposure = 1.05;
 
     this.scene.background = new THREE.Color(THEME.background);
-    this.scene.fog = new THREE.Fog(THEME.fog, 90, 320);
+    this.scene.fog = new THREE.Fog(THEME.fog, 70, 340);
 
     this.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 2000);
     this.camera.position.copy(this.camPos);
@@ -62,14 +62,14 @@ export class Scene {
   }
 
   private setupLights(): void {
-    const hemi = new THREE.HemisphereLight(0x9fb4ff, 0x0a0e14, 0.55);
+    const hemi = new THREE.HemisphereLight(0xaebfff, 0x0a0e14, 0.75);
     this.scene.add(hemi);
 
-    const key = new THREE.DirectionalLight(0xbcd2ff, 0.8);
+    const key = new THREE.DirectionalLight(0xcfe0ff, 1.0);
     key.position.set(60, 120, 40);
     this.scene.add(key);
 
-    const fill = new THREE.DirectionalLight(0x3a4763, 0.4);
+    const fill = new THREE.DirectionalLight(0x44557a, 0.45);
     fill.position.set(-50, 60, -30);
     this.scene.add(fill);
   }
@@ -83,9 +83,10 @@ export class Scene {
     ground.position.y = -0.05;
     this.scene.add(ground);
 
+    // A faint grid over the terrain gives motion & depth cues; fog fades it out.
     const grid = new THREE.GridHelper(6000, 300, THEME.grid, THEME.grid);
     (grid.material as THREE.Material).transparent = true;
-    (grid.material as THREE.Material).opacity = 0.25;
+    (grid.material as THREE.Material).opacity = 0.4;
     grid.position.y = -0.04;
     this.scene.add(grid);
   }
