@@ -12,6 +12,7 @@ import { CandidatesView } from "./render/CandidatesView.ts";
 import { TracksView } from "./render/TracksView.ts";
 import { OccupancyView } from "./render/OccupancyView.ts";
 import { SensorView } from "./render/SensorView.ts";
+import { BuildingsView } from "./render/BuildingsView.ts";
 import { HUD } from "./ui/HUD.ts";
 import { ControlPanel } from "./ui/ControlPanel.ts";
 
@@ -23,6 +24,7 @@ function boot(): void {
   const sim = new Simulation();
 
   const scene = new Scene(canvas);
+  const buildings = new BuildingsView(sim.road);
   const road = new RoadView(sim.road);
   const fleet = new CarFleet(sim);
   const ribbon = new PathRibbon();
@@ -31,6 +33,7 @@ function boot(): void {
   const occupancyView = new OccupancyView(sim.occupancy);
   const sensorView = new SensorView(sim.sensor.config.range);
 
+  scene.add(buildings.group);
   scene.add(road.group);
   scene.add(sensorView.object);
   scene.add(occupancyView.object);
@@ -45,6 +48,7 @@ function boot(): void {
     occupancy: occupancyView.object,
     tracks: tracksView.object,
     sensor: sensorView.object,
+    buildings: buildings.group,
   });
 
   // ---- fixed-timestep loop ----------------------------------------------
