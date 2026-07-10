@@ -228,10 +228,9 @@ export class Simulation {
     const k = this.path.maxCurvatureAhead(state.s, 100);
     const curveCap = k > 1e-4 ? Math.sqrt(aLatMax / k) : Infinity;
     this.planner.config.desiredSpeed = Math.max(6, Math.min(decision.targetSpeed, curveCap));
-    this.planner.config.kLaneChange = decision.kLaneChange;
 
     const t0 = performance.now();
-    const result = this.planner.plan(state, obstacles, currentLane);
+    const result = this.planner.plan(state, obstacles, currentLane, decision.biasLane);
     this.lastPlanMs = performance.now() - t0;
     this.plan = result.best;
     this.candidates = result.candidates;
