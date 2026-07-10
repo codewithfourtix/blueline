@@ -1,18 +1,16 @@
-// BehaviorPlanner — the high-level decision layer, implemented as a finite state
-// machine. Real AV stacks separate "what manoeuvre should I do" (behaviour) from
-// "what exact path realises it" (motion planning). This FSM inspects the tracked
-// obstacles in the ego's Frenet frame and picks one of:
+// BehaviorPlanner — the high-level decision layer, a finite state machine.
+// Real AV stacks separate "what manoeuvre" (behaviour) from "what exact path"
+// (motion planning). This FSM inspects the tracked obstacles in the Frenet frame
+// and picks a manoeuvre AND an explicit desired lane (one lane step at a time):
 //
-//   CRUISE     — open road: aim for the target cruising speed.
-//   FOLLOW     — a slower lead is ahead and lanes are blocked: adaptive cruise,
-//                match a safe speed for the current gap.
-//   OVERTAKE   — a slower lead is ahead and an adjacent lane is clear: keep the
-//                target speed and make lane changes cheap so the motion planner
-//                pulls out and passes.
-//   EMERGENCY  — imminent collision (tiny gap / low time-to-collision): stop.
+//   CRUISE     — open road: aim for target speed, and keep right when clear.
+//   FOLLOW     — slower lead, no room to pass: adaptive-cruise behind it.
+//   OVERTAKE   — slower lead and an adjacent lane is clear: move over ONE lane
+//                to pass (prefer the left).
+//   EMERGENCY  — imminent collision with no escape: stop.
 //
-// Its output modulates the FrenetPlanner (target speed + lane-change cost), so
-// the two layers stay cleanly separated but cooperate.
+// It hands the motion planner a `biasLane` so lane changes are deliberate and
+// single-step — never a random multi-lane swerve.
 
 import { Road } from "../world/Road.ts";
 import { Obstacle } from "../planner/Trajectory.ts";
@@ -30,7 +28,7 @@ export interface EgoState {
 export interface Decision {
   state: BehaviorState;
   targetSpeed: number;
-  kLaneChange: number; // lane-change cost handed to the motion planner
+  biasLane: number; // the lane the motion planner should aim for
 }
 
 const EGO_HALF_LEN = 2.35;
@@ -54,57 +52,59 @@ export class BehaviorPlanner {
       }
     }
 
+    const leftClear = ego.lane + 1 < this.road.numLanes && this.laneClear(ego, obstacles, ego.lane + 1, L);
+    const rightClear = ego.lane - 1 >= 0 && this.laneClear(ego, obstacles, ego.lane - 1, L);
+
+    // Open road: cruise and hold the lane (no cosmetic lane changes).
     if (!lead) {
-      return { state: "CRUISE", targetSpeed: baseSpeed, kLaneChange: 6 };
+      return { state: "CRUISE", targetSpeed: baseSpeed, biasLane: ego.lane };
     }
 
     const gap = Math.max(lead.gap, 0);
     const closing = ego.v - lead.v;
     const ttc = closing > 0.1 ? gap / closing : Infinity;
 
-    const leadIsSlow = lead.v < baseSpeed - 1.0;
-    // React to a lead sooner the faster we're going.
-    const withinFollow = gap < Math.max(55, ego.v * 2.4);
-    const leftClear = ego.lane + 1 < this.road.numLanes && this.laneClear(ego, obstacles, ego.lane + 1, L);
-    const rightClear = ego.lane - 1 >= 0 && this.laneClear(ego, obstacles, ego.lane - 1, L);
+    const leadIsSlow = lead.v < baseSpeed - 2.0;
+    // Distance at which a slower lead becomes "our problem" (grows with speed).
+    const withinFollow = gap < Math.max(45, ego.v * 1.9);
 
-    // 1) A slow/blocking lead ahead and an open lane → GO AROUND it. Checked
-    //    before emergency so a stalled car doesn't just trap us in a dead stop.
-    if (leadIsSlow && withinFollow && (leftClear || rightClear)) {
-      return { state: "OVERTAKE", targetSpeed: baseSpeed, kLaneChange: 2.0 };
+    // 1) Slower lead + an open lane → move over ONE lane to pass (prefer left).
+    if (leadIsSlow && withinFollow) {
+      if (leftClear) return { state: "OVERTAKE", targetSpeed: baseSpeed, biasLane: ego.lane + 1 };
+      if (rightClear) return { state: "OVERTAKE", targetSpeed: baseSpeed, biasLane: ego.lane - 1 };
     }
 
     // 2) Boxed in and dangerously close → stop.
-    if (gap < 6 || ttc < 2.2) {
-      return { state: "EMERGENCY", targetSpeed: 0, kLaneChange: 30 };
+    if (gap < 5 || ttc < 1.8) {
+      return { state: "EMERGENCY", targetSpeed: 0, biasLane: ego.lane };
     }
 
-    // 3) Slow lead, no open lane → adaptive-cruise follow.
+    // 3) Slower lead, no room to pass → adaptive-cruise follow.
     if (leadIsSlow && withinFollow) {
-      return { state: "FOLLOW", targetSpeed: this.accSpeed(gap, lead.v, ego.v, baseSpeed), kLaneChange: 10 };
+      return { state: "FOLLOW", targetSpeed: this.accSpeed(gap, lead.v, ego.v, baseSpeed), biasLane: ego.lane };
     }
 
-    // 4) Lead present but fast/far enough — cruise, but don't tailgate.
+    // 4) Lead present but fast/far — cruise (don't tailgate), hold the lane.
     const target = withinFollow ? Math.min(baseSpeed, this.accSpeed(gap, lead.v, ego.v, baseSpeed)) : baseSpeed;
-    return { state: "CRUISE", targetSpeed: target, kLaneChange: 6 };
+    return { state: "CRUISE", targetSpeed: target, biasLane: ego.lane };
   }
 
-  /** Is `lane` free of obstacles in a window around the ego? */
+  /** Is `lane` free of obstacles in a window around the ego (behind → ahead)? */
   private laneClear(ego: EgoState, obstacles: Obstacle[], lane: number, L: number): boolean {
     const dT = this.road.laneCenter(lane);
     const laneHalf = this.road.laneWidth * 0.6;
     for (const o of obstacles) {
       if (Math.abs(o.d - dT) > laneHalf) continue;
       const ds = wrapDiff(o.s, ego.s, L);
-      if (ds > -10 && ds < 32) return false; // something alongside or just ahead
+      if (ds > -12 && ds < 34) return false; // alongside or just ahead/behind
     }
     return true;
   }
 
   /** Adaptive-cruise target speed for a given gap to a lead. */
   private accSpeed(gap: number, leadV: number, egoV: number, baseSpeed: number): number {
-    const desiredGap = 8 + 1.5 * egoV; // larger safe headway at speed
-    const target = leadV + (gap - desiredGap) * 0.35;
+    const desiredGap = 6 + 1.2 * egoV;
+    const target = leadV + (gap - desiredGap) * 0.4;
     return clamp(target, 0, baseSpeed);
   }
 }
