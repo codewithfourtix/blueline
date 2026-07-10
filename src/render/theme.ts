@@ -5,15 +5,19 @@
 
 export const THEME = {
   // Scene
-  background: 0x0a0e14,
-  fog: 0x0a0e14,
-  ground: 0x0c1119,
-  grid: 0x161d29,
+  background: 0x090c12,
+  fog: 0x090c12,
+  ground: 0x0e141d,
+  grid: 0x1b2534,
 
-  // Road
-  asphalt: 0x151a22,
-  laneLine: 0x3a4763,
-  edgeLine: 0x5b6b8c,
+  // Road — asphalt is deliberately LIGHTER than the ground so the ribbon reads.
+  asphalt: 0x2b303b,
+  asphaltEdge: 0x22262f,
+  shoulder: 0x1a1e26,
+  laneLine: 0x9aa6bd,
+  edgeLine: 0xd8dee8,
+  delineator: 0x6fd0ff,
+  delineatorWarm: 0xffb44d,
 
   // Ego + path (the one accent colour)
   egoBlue: 0x2e8bff,
