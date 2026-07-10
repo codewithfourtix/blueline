@@ -1,8 +1,9 @@
 // Headless smoke test — runs the full autonomy stack (sensor → Kalman tracking
-// → behaviour FSM → Frenet planner → control → IDM/MOBIL traffic) with no
-// renderer, across several scenarios, and asserts it stays numerically healthy,
-// makes progress, perceives traffic, and — crucially — does not crash into the
-// stalled car or the cut-in. Real end-to-end verification without a browser.
+// → behaviour FSM → Frenet planner → Stanley control → IDM/MOBIL traffic) with
+// no renderer, across several scenarios. It asserts the stack stays numerically
+// healthy, perceives traffic, hits ZERO collisions, and — the driving-quality
+// guard — keeps the ego ON THE ROAD (never crossing the outer edge line),
+// including at high speed through the bends.
 
 import { Simulation } from "../src/sim/Simulation.ts";
 import type { ScenarioName } from "../src/traffic/TrafficManager.ts";
@@ -29,19 +30,23 @@ interface Stats {
   laneChanges: number;
   maxTracked: number;
   crashes: number;
-  minGap: number;
+  maxAbsD: number;
+  halfWidth: number;
+  worst: Record<string, unknown>;
   states: Set<string>;
 }
 
-function run(scenario: ScenarioName, steps: number): Stats {
+function run(scenario: ScenarioName, steps: number, desiredSpeed?: number): Stats {
   const sim = new Simulation();
   sim.setScenario(scenario);
+  if (desiredSpeed) sim.setDesiredSpeed(desiredSpeed);
   const dt = 1 / 60;
   const L = sim.path.length;
+  const halfWidth = sim.road.totalWidth / 2;
 
   const s: Stats = {
-    km: 0, minV: Infinity, maxV: -Infinity, laneChanges: 0,
-    maxTracked: 0, crashes: 0, minGap: Infinity, states: new Set(),
+    km: 0, minV: Infinity, maxV: -Infinity, laneChanges: 0, maxTracked: 0,
+    crashes: 0, maxAbsD: 0, halfWidth, worst: {}, states: new Set(),
   };
   let prevLane = sim.telemetry.lane;
 
@@ -62,16 +67,16 @@ function run(scenario: ScenarioName, steps: number): Stats {
       prevLane = sim.telemetry.lane;
     }
 
-    // Collision check in the road's Frenet frame.
     const ef = sim.path.toFrenet(x, y);
+    if (Math.abs(ef.d) > s.maxAbsD) {
+      s.maxAbsD = Math.abs(ef.d);
+      s.worst = { step: i, s: ef.s.toFixed(1), v: v.toFixed(1), lane: sim.telemetry.lane, state: sim.telemetry.behaviorState };
+    }
+
     for (const c of sim.traffic.cars) {
       const ds = Math.abs(wrapDiff(c.s, ef.s, L));
       const dd = Math.abs(c.d - ef.d);
-      const lonOverlap = (EGO_HALF_LEN + c.length / 2) * 0.8;
-      const latOverlap = (EGO_HALF_W + c.width / 2) * 0.75;
-      const clearance = Math.max(ds - lonOverlap, dd - latOverlap);
-      if (ds < 60) s.minGap = Math.min(s.minGap, Math.max(ds - (EGO_HALF_LEN + c.length / 2), 0));
-      if (ds < lonOverlap && dd < latOverlap) s.crashes++;
+      if (ds < (EGO_HALF_LEN + c.length / 2) * 0.8 && dd < (EGO_HALF_W + c.width / 2) * 0.75) s.crashes++;
       if (![c.s, c.d, c.v].every(Number.isFinite)) fail(`[${scenario}] non-finite car ${c.id}`);
     }
   }
@@ -84,34 +89,49 @@ function report(name: string, s: Stats): void {
   console.log(`  distance         : ${s.km.toFixed(2)} km`);
   console.log(`  speed range      : ${s.minV.toFixed(1)} – ${s.maxV.toFixed(1)} m/s`);
   console.log(`  lane changes     : ${s.laneChanges}`);
-  console.log(`  max tracks       : ${s.maxTracked}`);
   console.log(`  behaviour states : ${[...s.states].join(", ")}`);
-  console.log(`  min gap to car   : ${s.minGap === Infinity ? "n/a" : s.minGap.toFixed(2) + " m"}`);
+  console.log(`  max lateral |d|  : ${s.maxAbsD.toFixed(2)} m  (half-width ${s.halfWidth.toFixed(2)} m)`);
   console.log(`  crash steps      : ${s.crashes}`);
 }
 
-// --- highway: general health ------------------------------------------------
+function assertOnRoad(name: string, s: Stats): void {
+  if (s.maxAbsD > s.halfWidth) {
+    fail(`${name}: ego left the road (|d|=${s.maxAbsD.toFixed(2)} > ${s.halfWidth.toFixed(2)} m) @ ${JSON.stringify(s.worst)}`);
+  }
+}
+
+// --- highway: general health -----------------------------------------------
 const hw = run("highway", 3000);
 report("highway", hw);
 if (hw.km < 0.4) fail("highway: ego barely moved");
 if (hw.maxTracked < 1) fail("highway: perception produced no tracks");
 if (hw.crashes > 0) fail(`highway: ${hw.crashes} collision steps`);
+assertOnRoad("highway", hw);
 
-// --- stalled: must perceive and avoid a dead-stopped car in its lane --------
+// --- high speed: must slow for bends and stay on the road, never crashing ---
+const fast = run("highway", 3000, 40);
+report("highway@fast", fast);
+if (fast.crashes > 0) fail(`highway@fast: ${fast.crashes} collision steps`);
+assertOnRoad("highway@fast", fast);
+
+// --- stalled: perceive and avoid a dead-stopped car in its lane -------------
 const st = run("stalled", 2200);
 report("stalled", st);
 if (st.crashes > 0) fail(`stalled: ego hit the stalled car (${st.crashes} steps)`);
 if (st.km < 0.3) fail("stalled: ego did not progress (over-braked)");
+assertOnRoad("stalled", st);
 
 // --- cutin: aggressive car swerves in; ego must not crash -------------------
 const ci = run("cutin", 1800);
 report("cutin", ci);
 if (ci.crashes > 0) fail(`cutin: ego crashed during cut-in (${ci.crashes} steps)`);
+assertOnRoad("cutin", ci);
 
-// --- trucks: must overtake a slow convoy ------------------------------------
+// --- trucks: must overtake a slow convoy without leaving the road -----------
 const tr = run("trucks", 2600);
 report("trucks", tr);
 if (tr.crashes > 0) fail(`trucks: ego hit a truck (${tr.crashes} steps)`);
 if (tr.laneChanges < 1) fail("trucks: ego never overtook (no lane changes)");
+assertOnRoad("trucks", tr);
 
-console.log("\nSMOKE PASS — all scenarios healthy, zero collisions.");
+console.log("\nSMOKE PASS — all scenarios: on-road, zero collisions.");
