@@ -33,7 +33,8 @@ export interface PlannerConfig {
   kJerk: number;
   kTime: number;
   kSpeed: number;
-  kLaneChange: number;
+  kLaneChange: number; // cost per lane away from the current lane (stability)
+  kBias: number; // cost per lane away from the behaviour layer's desired lane
   kProximity: number;
   kOffCenter: number;
   // Safety margins for collision prediction (added to half-extents).
@@ -52,7 +53,8 @@ export const DEFAULT_PLANNER: PlannerConfig = {
   kJerk: 0.08,
   kTime: 0.5,
   kSpeed: 0.8,
-  kLaneChange: 6.0,
+  kLaneChange: 2.0,
+  kBias: 6.0,
   kProximity: 40.0,
   kOffCenter: 0.4,
   lonMargin: 3.5,
@@ -74,13 +76,17 @@ export class FrenetPlanner {
     this.config = { ...DEFAULT_PLANNER, ...config };
   }
 
-  plan(state: FrenetState, obstacles: Obstacle[], currentLane: number): PlanResult {
+  plan(state: FrenetState, obstacles: Obstacle[], currentLane: number, biasLane: number): PlanResult {
     const cfg = this.config;
     const L = this.road.path.length;
     const candidates: Trajectory[] = [];
 
+    // Only ever consider the current lane and its immediate neighbours, so a
+    // lane change is always a single, deliberate step (no multi-lane swerves).
     const targetLanes: number[] = [];
-    for (let i = 0; i < this.road.numLanes; i++) targetLanes.push(i);
+    for (let i = currentLane - 1; i <= currentLane + 1; i++) {
+      if (i >= 0 && i < this.road.numLanes) targetLanes.push(i);
+    }
 
     for (const lane of targetLanes) {
       const dTarget = this.road.laneCenter(lane);
@@ -97,7 +103,7 @@ export class FrenetPlanner {
           const vTarget = cfg.desiredSpeed * (1 - frac);
           const lon = new QuarticPolynomial(state.s, state.sDot, state.sDdot, vTarget, 0, T);
 
-          const traj = this.build(lat, lon, T, lane, currentLane, dTarget, vTarget, obstacles, L);
+          const traj = this.build(lat, lon, T, lane, currentLane, biasLane, dTarget, vTarget, obstacles, L);
           candidates.push(traj);
         }
       }
@@ -116,6 +122,7 @@ export class FrenetPlanner {
     T: number,
     lane: number,
     currentLane: number,
+    biasLane: number,
     dTarget: number,
     vTarget: number,
     obstacles: Obstacle[],
@@ -174,7 +181,8 @@ export class FrenetPlanner {
     }
 
     // ---- cost assembly -----------------------------------------------------
-    const laneChangeCost = cfg.kLaneChange * Math.abs(lane - currentLane);
+    const laneChangeCost =
+      cfg.kLaneChange * Math.abs(lane - currentLane) + cfg.kBias * Math.abs(lane - biasLane);
     const speedCost = cfg.kSpeed * (cfg.desiredSpeed - vTarget) ** 2;
     const offCenterCost = cfg.kOffCenter * dTarget * dTarget * 0; // reserved; lanes handle this
     const comfort = cfg.kJerk * jerkSq + cfg.kTime * T;
