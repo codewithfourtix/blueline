@@ -55,8 +55,8 @@ export const DEFAULT_PLANNER: PlannerConfig = {
   kLaneChange: 6.0,
   kProximity: 40.0,
   kOffCenter: 0.4,
-  lonMargin: 3.0,
-  latMargin: 0.6,
+  lonMargin: 3.5,
+  latMargin: 0.9,
 };
 
 const COLLISION_COST = 1e6;
