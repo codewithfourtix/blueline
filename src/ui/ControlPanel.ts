@@ -22,6 +22,9 @@ const SCENARIOS: { id: ScenarioName; label: string }[] = [
   { id: "stalled", label: "Stalled" },
   { id: "cutin", label: "Cut-in" },
   { id: "dense", label: "Dense" },
+  { id: "crossing", label: "Crossing" },
+  { id: "occluded", label: "Occluded ped" },
+  { id: "jaywalker", label: "Jaywalker" },
 ];
 
 export class ControlPanel {
