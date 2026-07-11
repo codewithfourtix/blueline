@@ -18,7 +18,7 @@ export class IntroOverlay {
             <div class="intro-item"><span class="intro-em">🚸</span><b>Hard cases</b><br>Pedestrians, occluded crossings, jaywalkers, stalled cars, cut-ins, traffic lights.</div>
             <div class="intro-item"><span class="intro-em">📊</span><b>Score &amp; compare</b><br>Live safety / comfort / efficiency scoring, and a head-to-head driver benchmark.</div>
           </div>
-          <div class="intro-hint">Everything runs client-side. Pick a scenario, train a brain, and watch it drive.</div>
+          <div class="intro-hint">Everything runs client-side. Pick a scenario, train a brain, and watch it drive.<br><span style="opacity:0.7">Keys: <b>1–9</b> scenarios · <b>T</b> train · <b>E</b> evolve · <b>C/N/V</b> driver · <b>Space</b> pause · <b>R</b> reset · <b>B</b> benchmark</span></div>
           <button class="bl intro-start" id="intro-start">Start driving →</button>
         </div>
       </div>
