@@ -379,6 +379,152 @@ button.bl.active {
   cursor: not-allowed;
 }
 
+/* ---- Scorecard (bottom-right) ---- */
+.scorecard {
+  position: absolute;
+  right: 20px;
+  bottom: 24px;
+  width: 232px;
+  padding: 15px 17px;
+}
+.scorecard h4 {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--bl-text-dim);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.score-top {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.score-num {
+  font-size: 46px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.score-of {
+  font-size: 12px;
+  color: var(--bl-text-dim);
+}
+.score-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 7px 0;
+}
+.score-k {
+  width: 66px;
+  font-size: 11.5px;
+  color: var(--bl-text-dim);
+}
+.score-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 6px;
+  background: #1a2536;
+  overflow: hidden;
+}
+.score-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 6px;
+  transition: width 0.25s ease, background 0.25s ease;
+}
+.score-v {
+  width: 22px;
+  text-align: right;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--bl-text);
+}
+.score-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 11px;
+  font-size: 11px;
+  color: var(--bl-text-dim);
+}
+
+/* ---- Benchmark modal ---- */
+.bench-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 9, 14, 0.72);
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+}
+.bench-card {
+  width: min(760px, calc(100vw - 40px));
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+  padding: 20px 22px;
+}
+.bench-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--bl-blue-bright);
+}
+.bench-head button {
+  background: none;
+  border: none;
+  color: var(--bl-text-dim);
+  font-size: 16px;
+  cursor: pointer;
+}
+.bench-sub {
+  font-size: 11px;
+  color: var(--bl-text-dim);
+  margin: 4px 0 16px;
+  letter-spacing: 0.5px;
+}
+#bench-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+}
+.bench-driver {
+  padding: 14px 15px;
+  border: 1px solid var(--bl-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.bench-driver.win {
+  border-color: rgba(74, 222, 128, 0.5);
+  box-shadow: 0 0 18px rgba(74, 222, 128, 0.15);
+}
+.bench-driver-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.bench-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.bench-overall {
+  font-size: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.bench-foot {
+  margin-top: 10px;
+  font-size: 10.5px;
+  color: var(--bl-text-dim);
+}
+
 /* ---- Loading ---- */
 #loading {
   position: fixed;
