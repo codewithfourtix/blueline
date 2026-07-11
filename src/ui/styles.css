@@ -379,6 +379,28 @@ button.bl.active {
   cursor: not-allowed;
 }
 
+/* ---- Minimap radar (top-left) ---- */
+.minimap {
+  position: absolute;
+  top: 18px;
+  left: 312px;
+  padding: 9px 9px 7px;
+}
+.mm-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--bl-text-dim);
+  margin-bottom: 6px;
+  text-align: center;
+}
+.minimap canvas {
+  display: block;
+  border-radius: 50%;
+}
+@media (max-width: 1280px) {
+  .minimap { display: none; }
+}
+
 /* ---- Scorecard (bottom-right) ---- */
 .scorecard {
   position: absolute;
@@ -523,6 +545,85 @@ button.bl.active {
   margin-top: 10px;
   font-size: 10.5px;
   color: var(--bl-text-dim);
+}
+
+/* ---- Intro overlay ---- */
+.intro-help {
+  position: absolute;
+  top: 24px;
+  left: 268px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--bl-border);
+  background: var(--bl-panel);
+  color: var(--bl-text-dim);
+  font-weight: 700;
+  cursor: pointer;
+  pointer-events: auto;
+  backdrop-filter: blur(10px);
+}
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 9, 14, 0.78);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+.intro-card {
+  width: min(660px, calc(100vw - 40px));
+  padding: 28px 30px;
+  text-align: center;
+}
+.intro-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: var(--bl-blue-bright);
+  text-shadow: 0 0 22px rgba(46, 139, 255, 0.5);
+}
+.intro-tag {
+  margin: 12px auto 22px;
+  max-width: 520px;
+  font-size: 14px;
+  color: var(--bl-text);
+  line-height: 1.5;
+}
+.intro-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  text-align: left;
+}
+.intro-item {
+  padding: 13px 15px;
+  border: 1px solid var(--bl-border);
+  border-radius: 11px;
+  font-size: 12.5px;
+  color: var(--bl-text-dim);
+  line-height: 1.5;
+}
+.intro-item b {
+  color: var(--bl-text);
+}
+.intro-em {
+  font-size: 17px;
+}
+.intro-hint {
+  margin: 20px 0 16px;
+  font-size: 12px;
+  color: var(--bl-text-dim);
+}
+.intro-start {
+  padding: 11px 26px;
+  font-size: 14px;
+}
+@media (max-width: 620px) {
+  .intro-grid { grid-template-columns: 1fr; }
 }
 
 /* ---- Loading ---- */
