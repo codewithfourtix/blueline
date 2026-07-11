@@ -16,6 +16,7 @@ import { BuildingsView } from "./render/BuildingsView.ts";
 import { PedestrianView } from "./render/PedestrianView.ts";
 import { HUD } from "./ui/HUD.ts";
 import { ControlPanel } from "./ui/ControlPanel.ts";
+import { LearningPanel } from "./ui/LearningPanel.ts";
 
 function boot(): void {
   const canvas = document.getElementById("scene") as HTMLCanvasElement;
@@ -52,6 +53,8 @@ function boot(): void {
   scene.add(tracksView.object);
 
   const hud = new HUD(uiRoot);
+  // eslint-disable-next-line no-new
+  new LearningPanel(uiRoot, sim);
   // eslint-disable-next-line no-new
   new ControlPanel(uiRoot, sim, scene, candidates, {
     occupancy: occupancyView.object,

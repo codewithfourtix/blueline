@@ -23,7 +23,11 @@ import { Tracker, Track } from "../perception/Tracker.ts";
 import { OccupancyGrid } from "../perception/OccupancyGrid.ts";
 import { PedestrianManager } from "../pedestrian/PedestrianManager.ts";
 import { BehaviorPlanner, BehaviorState } from "../behavior/BehaviorPlanner.ts";
+import { ImitationAgent } from "../learn/ImitationAgent.ts";
+import { DriveContext, extractFeatures } from "../learn/features.ts";
 import { clamp, wrapAngle, mod } from "../core/math.ts";
+
+export type ControlMode = "classical" | "learned";
 import { DEFAULT_SIM, SimConfig } from "./config.ts";
 
 export interface Telemetry {
@@ -43,6 +47,7 @@ export interface Telemetry {
   usePerception: boolean;
   behaviorState: BehaviorState;
   pedCount: number; // active pedestrians
+  controlMode: ControlMode;
 }
 
 export class Simulation {
@@ -57,8 +62,12 @@ export class Simulation {
   readonly occupancy: OccupancyGrid;
   readonly pedestrians: PedestrianManager;
   readonly behavior: BehaviorPlanner;
+  readonly imitation: ImitationAgent;
   behaviorState: BehaviorState = "CRUISE";
+  controlMode: ControlMode = "classical";
+  collecting = false;
   private baseDesiredSpeed: number;
+  private lastObstacles: Obstacle[] = [];
 
   plan: Trajectory | null = null;
   candidates: Trajectory[] = [];
@@ -101,6 +110,7 @@ export class Simulation {
     this.occupancy = new OccupancyGrid(50, 2);
     this.pedestrians = new PedestrianManager(this.road);
     this.behavior = new BehaviorPlanner(this.road);
+    this.imitation = new ImitationAgent();
     this.baseDesiredSpeed = this.config.egoDesiredSpeed;
 
     this.speedPID = new PID(1.2, 0.15, 0.05, -this.ego.maxDecel, this.ego.maxAccel);
@@ -127,6 +137,7 @@ export class Simulation {
       usePerception: this.usePerception,
       behaviorState: "CRUISE",
       pedCount: 0,
+      controlMode: "classical",
     };
 
     // Prime perception + the first plan so control has something on frame 1.
@@ -307,6 +318,38 @@ export class Simulation {
     this.lastPlanMs = performance.now() - t0;
     this.plan = result.best;
     this.candidates = result.candidates;
+    this.lastObstacles = obstacles;
+  }
+
+  /** Build the normalised feature vector the learned agents see. */
+  private buildFeatures(): number[] {
+    const f = this.path.toFrenet(this.ego.x, this.ego.y, this.lastEgoIndex);
+    const pathHeading = this.path.cartesianAt(f.s).heading;
+    const ctx: DriveContext = {
+      v: this.ego.v,
+      d: f.d,
+      headingErr: wrapAngle(this.ego.yaw - pathHeading),
+      curvature: this.path.signedCurvatureAt(f.s),
+      laneIndex: this.road.laneOf(f.d),
+      numLanes: this.road.numLanes,
+      laneWidth: this.road.laneWidth,
+      roadHalf: this.road.totalWidth / 2,
+      egoS: f.s,
+      L: this.path.length,
+      desiredSpeed: this.baseDesiredSpeed,
+      obstacles: this.lastObstacles.map((o) => ({ s: o.s, d: o.d, v: o.v, kind: o.kind, length: o.length })),
+    };
+    return extractFeatures(ctx);
+  }
+
+  setControlMode(m: ControlMode): void {
+    this.controlMode = m;
+  }
+  setCollecting(on: boolean): void {
+    this.collecting = on;
+  }
+  trainImitation(epochs = 60) {
+    return this.imitation.train(epochs);
   }
 
   /** Advance the simulation by one fixed step. */
@@ -324,7 +367,9 @@ export class Simulation {
     }
 
     // --- control (every step) ----------------------------------------------
-    let steer = 0;
+    // 1) The classical controller always runs — it's both a fallback and the
+    //    expert whose actions the learned agent imitates.
+    let classicalSteer = 0;
     let targetSpeed = this.planner.config.desiredSpeed;
     if (this.plan && this.plan.points.length >= 2) {
       // Stanley lateral control tracking the TARGET LANE CENTRE in the road's
@@ -337,11 +382,23 @@ export class Simulation {
       const roadHeading = this.path.cartesianAt(ff.s).heading;
       const headingErr = wrapAngle(roadHeading - this.ego.yaw);
       const crossTrack = ff.d - targetLaneD; // +ve when ego is left of lane centre
-      steer = stanleyControl(headingErr, crossTrack, this.ego.v, this.steerConfig);
-      // Target the planned speed ~0.8 s ahead for a responsive but smooth ACC.
+      classicalSteer = stanleyControl(headingErr, crossTrack, this.ego.v, this.steerConfig);
       targetSpeed = speedAtTime(this.plan, 0.8);
     }
-    const accel = this.speedPID.update(targetSpeed - this.ego.v, dt);
+    const classicalAccel = this.speedPID.update(targetSpeed - this.ego.v, dt);
+
+    // 2) Features + optional imitation data collection.
+    const feat = this.buildFeatures();
+    if (this.collecting) this.imitation.addSample(feat, classicalSteer, classicalAccel);
+
+    // 3) Choose who drives.
+    let steer = classicalSteer;
+    let accel = classicalAccel;
+    if (this.controlMode === "learned" && this.imitation.trained) {
+      const a = this.imitation.act(feat);
+      steer = a.steer;
+      accel = a.accel;
+    }
 
     const prevX = this.ego.x;
     const prevY = this.ego.y;
@@ -369,6 +426,7 @@ export class Simulation {
     this.telemetry.usePerception = this.usePerception;
     this.telemetry.behaviorState = this.behaviorState;
     this.telemetry.pedCount = this.pedestrians.peds.filter((p) => p.state !== "done").length;
+    this.telemetry.controlMode = this.controlMode;
   }
 }
 

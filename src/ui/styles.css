@@ -289,6 +289,92 @@ button.bl.active {
 }
 .switch.on .knob { transform: translateX(17px); }
 
+/* ---- Neural Driver panel (top-centre) ---- */
+.neural {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 360px;
+  max-width: calc(100vw - 40px);
+  padding: 13px 16px;
+}
+.neural-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.neural-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--bl-blue-bright);
+}
+.neural-sub {
+  font-size: 10.5px;
+  color: var(--bl-text-dim);
+  letter-spacing: 0.5px;
+}
+.neural-train {
+  width: 100%;
+}
+.neural-prog {
+  margin-top: 11px;
+}
+.neural-bar {
+  height: 6px;
+  border-radius: 6px;
+  background: #1a2536;
+  overflow: hidden;
+}
+.neural-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #2e8bff, #5fb0ff);
+  box-shadow: 0 0 10px rgba(46, 139, 255, 0.6);
+  transition: width 0.2s ease;
+}
+.neural-stat {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--bl-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.neural-drive {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.neural-drive-label {
+  font-size: 12px;
+  color: var(--bl-text-dim);
+}
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--bl-border);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.seg-btn {
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bl-text-dim);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.seg-btn.active {
+  background: rgba(46, 139, 255, 0.18);
+  color: var(--bl-blue-bright);
+}
+
 /* ---- Loading ---- */
 #loading {
   position: fixed;
