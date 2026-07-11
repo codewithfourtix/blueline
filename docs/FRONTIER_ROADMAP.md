@@ -21,7 +21,7 @@ implemented, built, smoke-tested, screenshot-verified, committed, then the next.
       generations improve live; deploy champion as a driver.
 - [x] **P3 — Analytics / scorecard**
       Live safety/comfort/efficiency metrics; compare Classical vs Learned vs Evolved.
-- [ ] **P4 — Urban: traffic lights + intersections + stop-line planning**
+- [x] **P4 — Urban: traffic lights + intersections + stop-line planning**
 - [ ] **P5 — Richer sensing / sensor fusion viz; recording & replay**
 - [ ] **P6 — Polish: intro overlay, guided tour, performance, mobile**
 
