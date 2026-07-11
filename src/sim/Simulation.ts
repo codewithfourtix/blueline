@@ -47,6 +47,7 @@ export interface Telemetry {
   usePerception: boolean;
   behaviorState: BehaviorState;
   pedCount: number; // active pedestrians
+  controlMode: ControlMode;
 }
 
 export class Simulation {
@@ -136,6 +137,7 @@ export class Simulation {
       usePerception: this.usePerception,
       behaviorState: "CRUISE",
       pedCount: 0,
+      controlMode: "classical",
     };
 
     // Prime perception + the first plan so control has something on frame 1.
@@ -424,6 +426,7 @@ export class Simulation {
     this.telemetry.usePerception = this.usePerception;
     this.telemetry.behaviorState = this.behaviorState;
     this.telemetry.pedCount = this.pedestrians.peds.filter((p) => p.state !== "done").length;
+    this.telemetry.controlMode = this.controlMode;
   }
 }
 
