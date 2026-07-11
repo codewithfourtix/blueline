@@ -15,3 +15,5 @@ pnpm-debug.log*
 /capture-frames.mjs
 /bench-shot.mjs
 /gh-shot.mjs
+
+/hero.mjs

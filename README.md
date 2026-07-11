@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/city.gif" width="100%" alt="Blueline — a self-driving car navigating a city loop, entirely in the browser: a Frenet lattice planner picks the green path, Stanley + PID steer it, a Kalman filter tracks the surrounding traffic." />
+  <img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/hero.jpg" width="100%" alt="Blueline — a self-driving car navigating a city loop, entirely in the browser: a Frenet lattice planner picks the green path, Stanley + PID steer it, a Kalman filter tracks the surrounding traffic." />
 </p>
 
 <h1 align="center">▍&nbsp;B&nbsp;L&nbsp;U&nbsp;E&nbsp;L&nbsp;I&nbsp;N&nbsp;E</h1>
@@ -75,11 +75,11 @@ Live **safety / comfort / efficiency** scoring, and a head-to-head **benchmark**
 <table>
 <tr>
 <td width="50%" align="center">
-<img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/streets.gif" width="100%" alt="Chase-cam view cruising the city block with live HUD telemetry"/><br/>
+<img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/streets.webp" width="100%" alt="Chase-cam view cruising the city block with live HUD telemetry"/><br/>
 <sub><b>Chase cam</b> — cruising the block, lane markings, live telemetry.</sub>
 </td>
 <td width="50%" align="center">
-<img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/neural.gif" width="100%" alt="A from-scratch neural network driving after training, with its loss curve falling in real time"/><br/>
+<img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/neural.webp" width="100%" alt="A from-scratch neural network driving after training, with its loss curve falling in real time"/><br/>
 <sub><b>Neural net at the wheel</b> — trained live (watch the loss fall), then driving.</sub>
 </td>
 </tr>
@@ -170,7 +170,7 @@ exactly why every claim below is a passing test, not a screenshot.
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/neural.gif" width="80%" alt="The neural driver panel: loss curve falling to 0.0144 over 29,400 samples, NEURAL NET at the wheel, drive score 84"/>
+  <img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/neural.webp" width="80%" alt="The neural driver panel: loss curve falling to 0.0144 over 29,400 samples, NEURAL NET at the wheel, drive score 84"/>
 </p>
 
 <table>
