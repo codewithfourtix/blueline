@@ -27,3 +27,9 @@ implemented, built, smoke-tested, screenshot-verified, committed, then the next.
 
 Assumptions: keep everything self-contained (no external ML libs — avoids CSP/CDN
 issues), deterministic-seeded tests, verify each phase headlessly + by screenshot.
+
+## Extra features shipped this run
+- [x] Live training chart (loss/fitness) + localStorage brain persistence
+- [x] Cockpit minimap radar + welcome intro overlay
+- [x] Adverse weather (rain/fog) with degraded perception + cautious driving
+- [x] Driving trail (breadcrumb of the path driven)

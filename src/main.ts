@@ -15,6 +15,7 @@ import { SensorView } from "./render/SensorView.ts";
 import { BuildingsView } from "./render/BuildingsView.ts";
 import { PedestrianView } from "./render/PedestrianView.ts";
 import { TrafficLightView } from "./render/TrafficLightView.ts";
+import { TrailView } from "./render/TrailView.ts";
 import { HUD } from "./ui/HUD.ts";
 import { ControlPanel } from "./ui/ControlPanel.ts";
 import { LearningPanel } from "./ui/LearningPanel.ts";
@@ -51,10 +52,12 @@ function boot(): void {
   const sensorView = new SensorView(sim.sensor.config.range);
   const pedView = new PedestrianView(sim.path);
   const lightView = new TrafficLightView(sim.path, sim.road.totalWidth / 2);
+  const trailView = new TrailView();
 
   scene.add(buildings.group);
   scene.add(road.group);
   scene.add(lightView.group);
+  scene.add(trailView.mesh);
   scene.add(sensorView.object);
   scene.add(occupancyView.object);
   scene.add(fleet.group);
@@ -103,6 +106,7 @@ function boot(): void {
     fleet.update();
     pedView.update(sim.pedestrians.peds);
     lightView.update(sim.trafficLights);
+    if (!sim.paused) trailView.update(sim.ego.x, sim.ego.y);
     ribbon.update(sim.plan, sim.planner.config.desiredSpeed);
     candidates.update(sim.candidates, sim.plan);
     tracksView.update(sim.tracks);
