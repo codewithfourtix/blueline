@@ -32,27 +32,23 @@ export async function evolveDriver(onProgress: (p: EvoProgress) => void): Promis
   const POP = 24;
   const GENS = 16;
   const ELITE = 4;
-  const ROLL = 1000;
+  const ROLL = 700;
   const dt = 1 / 60;
 
   const template = new MLP(ARCH);
   const genomeLen = template.flat().length;
   const net = new MLP(ARCH); // reused for evaluation
   const sim = new Simulation();
+  sim.safetyShieldEnabled = false; // judge each candidate on its RAW driving
   const L = sim.path.length;
   const roadHalf = sim.road.totalWidth / 2;
   const wrap = (a: number, b: number) => { let d = (a - b) % L; if (d < -L / 2) d += L; else if (d > L / 2) d -= L; return d; };
 
   const randomGenome = (): number[] => Array.from({ length: genomeLen }, () => randn() * 0.5);
 
-  // Fitness: reward forward progress, punish leaving the road / collisions, and
-  // terminate a hopeless rollout early so bad genomes die fast.
-  const evaluate = (g: number[]): number => {
-    net.setFlat(g);
-    sim.setScenario("highway");
-    sim.setDesiredSpeed(26);
-    sim.externalPolicy = (f) => decodeAction(net.predict(f));
-    sim.setControlMode("external");
+  // One driving rollout on the CURRENT traffic. Rewards progress, punishes
+  // wandering / leaving the road, and dies early on a hopeless run.
+  const rollout = (): number => {
     let reward = 0;
     for (let i = 0; i < ROLL; i++) {
       sim.step(dt);
@@ -60,9 +56,8 @@ export async function evolveDriver(onProgress: (p: EvoProgress) => void): Promis
       const ef = sim.path.toFrenet(sim.ego.x, sim.ego.y);
       reward += sim.ego.v * dt; // progress
       const off = Math.abs(ef.d);
-      reward -= 0.35 * Math.max(0, off - 2) * dt; // stay tight to a lane centre
-      if (off > roadHalf) reward -= 6 * dt;
-      if (off > roadHalf + 3) return reward - 25; // off the road → die
+      reward -= 0.6 * Math.max(0, off - 2) * dt; // stay tight to a lane centre
+      if (off > roadHalf - 0.4) return reward - 20; // leaving the road → die
       for (const c of sim.traffic.cars) {
         const ds = Math.abs(wrap(c.s, ef.s));
         const dd = Math.abs(c.d - ef.d);
@@ -70,6 +65,22 @@ export async function evolveDriver(onProgress: (p: EvoProgress) => void): Promis
       }
     }
     return reward;
+  };
+
+  // Fitness = worst of TWO rollouts on DIFFERENT traffic, so we select for a
+  // policy that generalises (not one that memorised one layout).
+  const evaluate = (g: number[]): number => {
+    net.setFlat(g);
+    sim.externalPolicy = (f) => decodeAction(net.predict(f));
+    let worst = Infinity;
+    for (let r = 0; r < 2; r++) {
+      sim.setScenario("highway"); // respawns traffic randomly
+      sim.setDesiredSpeed(26);
+      sim.safetyShieldEnabled = false;
+      sim.setControlMode("external");
+      worst = Math.min(worst, rollout());
+    }
+    return worst;
   };
 
   const tournament = (pop: number[][], fits: number[]): number[] => {
