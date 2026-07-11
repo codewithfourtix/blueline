@@ -33,9 +33,14 @@ function boot(): void {
   const wanted = new URLSearchParams(location.search).get("scenario");
   const known = ["highway", "dense", "trucks", "stalled", "cutin", "crossing", "occluded", "jaywalker", "lights"];
   if (wanted && known.includes(wanted)) sim.setScenario(wanted as never);
+  const wx = new URLSearchParams(location.search).get("weather");
 
   const scene = new Scene(canvas);
   if (new URLSearchParams(location.search).get("cam") === "top") scene.cameraMode = "top";
+  if (wx === "rain" || wx === "fog") {
+    sim.setWeather(wx);
+    scene.setWeather(wx);
+  }
   const buildings = new BuildingsView(sim.road);
   const road = new RoadView(sim.road);
   const fleet = new CarFleet(sim);
@@ -104,6 +109,7 @@ function boot(): void {
     occupancyView.update(sim.occupancy);
     sensorView.update(sim.ego.x, sim.ego.y, sim.sensor.config.range);
     scene.updateCamera(sim.ego.x, sim.ego.y, sim.ego.yaw, delta);
+    scene.updateWeather(delta, sim.ego.x, sim.ego.y);
     hud.update(sim.telemetry, sim.road.numLanes);
     scorecard.update();
     minimap.update();
