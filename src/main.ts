@@ -22,6 +22,7 @@ import { LearningPanel } from "./ui/LearningPanel.ts";
 import { Scorecard } from "./ui/Scorecard.ts";
 import { Minimap } from "./ui/Minimap.ts";
 import { IntroOverlay } from "./ui/IntroOverlay.ts";
+import { Shortcuts } from "./ui/Shortcuts.ts";
 
 function boot(): void {
   const canvas = document.getElementById("scene") as HTMLCanvasElement;
@@ -71,6 +72,8 @@ function boot(): void {
   const minimap = new Minimap(uiRoot, sim);
   // eslint-disable-next-line no-new
   new IntroOverlay(uiRoot);
+  // eslint-disable-next-line no-new
+  new Shortcuts();
   // eslint-disable-next-line no-new
   new LearningPanel(uiRoot, sim);
   // eslint-disable-next-line no-new
