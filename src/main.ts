@@ -14,6 +14,7 @@ import { OccupancyView } from "./render/OccupancyView.ts";
 import { SensorView } from "./render/SensorView.ts";
 import { BuildingsView } from "./render/BuildingsView.ts";
 import { PedestrianView } from "./render/PedestrianView.ts";
+import { TrafficLightView } from "./render/TrafficLightView.ts";
 import { HUD } from "./ui/HUD.ts";
 import { ControlPanel } from "./ui/ControlPanel.ts";
 import { LearningPanel } from "./ui/LearningPanel.ts";
@@ -28,7 +29,7 @@ function boot(): void {
 
   // Allow deep-linking a scenario, e.g. ?scenario=crossing
   const wanted = new URLSearchParams(location.search).get("scenario");
-  const known = ["highway", "dense", "trucks", "stalled", "cutin", "crossing", "occluded", "jaywalker"];
+  const known = ["highway", "dense", "trucks", "stalled", "cutin", "crossing", "occluded", "jaywalker", "lights"];
   if (wanted && known.includes(wanted)) sim.setScenario(wanted as never);
 
   const scene = new Scene(canvas);
@@ -42,9 +43,11 @@ function boot(): void {
   const occupancyView = new OccupancyView(sim.occupancy);
   const sensorView = new SensorView(sim.sensor.config.range);
   const pedView = new PedestrianView(sim.path);
+  const lightView = new TrafficLightView(sim.path, sim.road.totalWidth / 2);
 
   scene.add(buildings.group);
   scene.add(road.group);
+  scene.add(lightView.group);
   scene.add(sensorView.object);
   scene.add(occupancyView.object);
   scene.add(fleet.group);
@@ -89,6 +92,7 @@ function boot(): void {
     // ---- sync views ----
     fleet.update();
     pedView.update(sim.pedestrians.peds);
+    lightView.update(sim.trafficLights);
     ribbon.update(sim.plan, sim.planner.config.desiredSpeed);
     candidates.update(sim.candidates, sim.plan);
     tracksView.update(sim.tracks);
