@@ -10,5 +10,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# local screenshot helper (puppeteer, --no-save)
+# local media-capture helpers (puppeteer, --no-save)
 /shot.mjs
+/capture-frames.mjs
+/bench-shot.mjs
