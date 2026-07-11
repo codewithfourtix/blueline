@@ -104,6 +104,17 @@ export class ReferencePath {
     return Math.abs(dh) / (2 * ds);
   }
 
+  /** Signed road curvature dθ/ds at station s (left turn positive). */
+  signedCurvatureAt(s: number): number {
+    const ds = 4;
+    const h1 = this.cartesianAt(mod(s - ds, this.length)).heading;
+    const h2 = this.cartesianAt(mod(s + ds, this.length)).heading;
+    let dh = h2 - h1;
+    while (dh > Math.PI) dh -= Math.PI * 2;
+    while (dh <= -Math.PI) dh += Math.PI * 2;
+    return dh / (2 * ds);
+  }
+
   /** Max curvature over the next `dist` metres from s (for speed planning). */
   maxCurvatureAhead(s: number, dist: number): number {
     let k = 0;
