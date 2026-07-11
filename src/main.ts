@@ -43,6 +43,7 @@ function boot(): void {
     sim.setWeather(wx);
     scene.setWeather(wx);
   }
+  if (new URLSearchParams(location.search).get("tod") === "day") scene.setTimeOfDay("day");
   const buildings = new BuildingsView(sim.road);
   const road = new RoadView(sim.road);
   const fleet = new CarFleet(sim);

@@ -38,6 +38,7 @@ export class Scene {
     this.renderer.toneMappingExposure = 1.05;
 
     this.scene.background = this.makeGradientBackground();
+    this.nightBg = this.scene.background;
     this.scene.fog = new THREE.Fog(THEME.fog, 80, 360);
 
     this.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 2000);
@@ -80,17 +81,48 @@ export class Scene {
     return tex;
   }
 
-  private setupLights(): void {
-    const hemi = new THREE.HemisphereLight(0xaebfff, 0x0a0e14, 0.75);
-    this.scene.add(hemi);
+  private hemi!: THREE.HemisphereLight;
+  private key!: THREE.DirectionalLight;
+  private nightBg!: THREE.Texture;
+  private dayBg!: THREE.Texture;
 
-    const key = new THREE.DirectionalLight(0xcfe0ff, 1.0);
-    key.position.set(60, 120, 40);
-    this.scene.add(key);
+  private setupLights(): void {
+    this.hemi = new THREE.HemisphereLight(0xaebfff, 0x0a0e14, 0.75);
+    this.scene.add(this.hemi);
+
+    this.key = new THREE.DirectionalLight(0xcfe0ff, 1.0);
+    this.key.position.set(60, 120, 40);
+    this.scene.add(this.key);
 
     const fill = new THREE.DirectionalLight(0x44557a, 0.45);
     fill.position.set(-50, 60, -30);
     this.scene.add(fill);
+  }
+
+  setTimeOfDay(t: "day" | "night"): void {
+    const fog = this.scene.fog as THREE.Fog;
+    if (t === "day") {
+      if (!this.dayBg) this.dayBg = gradientTexture(["#8fbce8", "#bcd7f0", "#d7e7f5"]);
+      this.scene.background = this.dayBg;
+      this.hemi.color.setHex(0xdfeaff);
+      this.hemi.intensity = 1.15;
+      this.key.color.setHex(0xfff2da);
+      this.key.intensity = 1.7;
+      this.renderer.toneMappingExposure = 1.15;
+      fog.color.setHex(0xcadcec);
+      fog.near = 120;
+      fog.far = 520;
+    } else {
+      this.scene.background = this.nightBg;
+      this.hemi.color.setHex(0xaebfff);
+      this.hemi.intensity = 0.75;
+      this.key.color.setHex(0xcfe0ff);
+      this.key.intensity = 1.0;
+      this.renderer.toneMappingExposure = 1.05;
+      fog.color.setHex(THEME.fog);
+      fog.near = 80;
+      fog.far = 360;
+    }
   }
 
   private setupGround(): void {
@@ -215,4 +247,19 @@ export class Scene {
     this.renderer.setSize(w, h);
     this.composer.setSize(w, h);
   }
+}
+
+/** Build a vertical gradient background texture from CSS colour stops. */
+function gradientTexture(colors: string[]): THREE.Texture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 4;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d")!;
+  const g = ctx.createLinearGradient(0, 0, 0, 512);
+  colors.forEach((c, i) => g.addColorStop(i / (colors.length - 1), c));
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 4, 512);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }

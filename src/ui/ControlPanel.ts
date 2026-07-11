@@ -80,6 +80,12 @@ export class ControlPanel {
           <button class="seg-btn" data-w="rain">Rain</button>
           <button class="seg-btn" data-w="fog">Fog</button>
         </div>
+
+        <div class="ctl-label" style="margin-top:2px">Time of day</div>
+        <div class="seg" id="c-tod">
+          <button class="seg-btn active" data-t="night">Night</button>
+          <button class="seg-btn" data-t="day">Day</button>
+        </div>
       </div>
       `,
     );
@@ -91,6 +97,18 @@ export class ControlPanel {
     this.wirePlayReset();
     this.wireCamera();
     this.wireWeather();
+    this.wireTimeOfDay();
+  }
+
+  private wireTimeOfDay(): void {
+    const btns = Array.from(document.querySelectorAll<HTMLButtonElement>("#c-tod .seg-btn"));
+    for (const b of btns) {
+      b.addEventListener("click", () => {
+        btns.forEach((x) => x.classList.remove("active"));
+        b.classList.add("active");
+        this.scene.setTimeOfDay(b.dataset.t as "day" | "night");
+      });
+    }
   }
 
   private wireWeather(): void {
