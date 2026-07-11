@@ -28,7 +28,7 @@ import { ImitationAgent } from "../learn/ImitationAgent.ts";
 import { DriveContext, extractFeatures } from "../learn/features.ts";
 import { MLP } from "../learn/NN.ts";
 import { Metrics } from "./Metrics.ts";
-import { clamp, wrapAngle, mod, wrapDiff } from "../core/math.ts";
+import { clamp, wrapAngle, mod, wrapDiff, smoothTowards } from "../core/math.ts";
 
 export type ControlMode = "classical" | "learned" | "external";
 export type Policy = (features: number[]) => { steer: number; accel: number };
@@ -82,6 +82,7 @@ export class Simulation {
   private baseDesiredSpeed: number;
   private lastObstacles: Obstacle[] = [];
   private junctionStations: number[] = [];
+  private trackLaneD = 0; // smoothly-eased lane-centre the controller tracks
 
   plan: Trajectory | null = null;
   candidates: Trajectory[] = [];
@@ -186,6 +187,7 @@ export class Simulation {
     this.speedPID.reset();
     this.distance = 0;
     this.lastEgoIndex = -1;
+    this.trackLaneD = this.road.laneCenter(mid);
     this.configureScenario(mid);
     this.tracker.reset();
     this.tracks = [];
@@ -491,10 +493,13 @@ export class Simulation {
       const fx = this.ego.x + (wb / 2) * Math.cos(this.ego.yaw);
       const fy = this.ego.y + (wb / 2) * Math.sin(this.ego.yaw);
       const ff = this.path.toFrenet(fx, fy, -1);
-      const targetLaneD = this.road.laneCenter(this.plan.targetLane);
+      // Ease the tracked lane centre toward the planner's target lane, so a lane
+      // change glides over ~2 s instead of jerking the wheel a full lane width.
+      const goalLaneD = this.road.laneCenter(this.plan.targetLane);
+      this.trackLaneD = smoothTowards(this.trackLaneD, goalLaneD, 1.6, dt);
       const roadHeading = this.path.cartesianAt(ff.s).heading;
       const headingErr = wrapAngle(roadHeading - this.ego.yaw);
-      const crossTrack = ff.d - targetLaneD; // +ve when ego is left of lane centre
+      const crossTrack = ff.d - this.trackLaneD; // +ve when ego is left of tracked centre
       classicalSteer = stanleyControl(headingErr, crossTrack, this.ego.v, this.steerConfig);
       // Never target above the current desired-speed cap, so a stop command
       // (red light / yield / emergency) takes effect without the look-ahead lag.
