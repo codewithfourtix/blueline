@@ -1,105 +1,108 @@
-<div align="center">
+<p align="center">
+  <img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/city.gif" width="100%" alt="Blueline — a self-driving car navigating a city loop, entirely in the browser: a Frenet lattice planner picks the green path, Stanley + PID steer it, a Kalman filter tracks the surrounding traffic." />
+</p>
 
-<h1>
-  <img src="https://img.shields.io/badge/-●-1fd18b?style=flat-square" height="20" alt="" />
-  &nbsp;B L U E L I N E
-</h1>
+<h1 align="center">▍&nbsp;B&nbsp;L&nbsp;U&nbsp;E&nbsp;L&nbsp;I&nbsp;N&nbsp;E</h1>
 
-### A self-driving car that runs a **real autonomy stack** in your browser — <br/>and a neural driver you **train, evolve, and race** against it. Live. No backend.
+<p align="center">
+  <b>A self-driving car that runs a <em>real autonomy stack</em> in your browser —<br/>
+  and a neural driver you <em>train, evolve, and race</em> against it. Live. No backend.</b>
+</p>
+
+<p align="center">
+  <b>Perception → Planning → Control</b> · a classical stack
+  &nbsp;&nbsp;•&nbsp;&nbsp;
+  <b>Trained live</b> · imitation + neuroevolution
+  &nbsp;&nbsp;•&nbsp;&nbsp;
+  <b>0 collisions</b> · 9 scenarios
+</p>
+
+<p align="center">
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-strict-1fd18b?style=flat-square&labelColor=0d0e11" alt="TypeScript strict"/></a>
+  <a href="https://threejs.org/"><img src="https://img.shields.io/badge/Three.js-r161-1fd18b?style=flat-square&labelColor=0d0e11" alt="Three.js r161"/></a>
+  <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/Vite-5-1fd18b?style=flat-square&labelColor=0d0e11" alt="Vite 5"/></a>
+  <a href="#-the-learned-drivers--no-ml-library"><img src="https://img.shields.io/badge/neural%20nets-from%20scratch-1fd18b?style=flat-square&labelColor=0d0e11" alt="Neural nets from scratch"/></a>
+  <a href="#-proof-it-actually-works"><img src="https://img.shields.io/badge/9%20scenarios-0%20collisions-1fd18b?style=flat-square&labelColor=0d0e11" alt="0 collisions"/></a>
+  <a href="#run-it"><img src="https://img.shields.io/badge/runs-100%25%20client--side-1fd18b?style=flat-square&labelColor=0d0e11" alt="100% client-side"/></a>
+</p>
+
+<p align="center">
+  <a href="#two-schools-of-autonomy-side-by-side"><b>How it works</b></a> &nbsp;·&nbsp;
+  <a href="#-watch-it-drive"><b>Watch it drive</b></a> &nbsp;·&nbsp;
+  <a href="#-the-learned-drivers--no-ml-library"><b>The neural drivers</b></a> &nbsp;·&nbsp;
+  <a href="#-proof-it-actually-works"><b>Proof</b></a> &nbsp;·&nbsp;
+  <a href="#run-it"><b>Run it</b></a>
+</p>
 
 <br/>
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-1fd18b?style=flat-square&labelColor=101114)](https://www.typescriptlang.org/)
-[![Three.js](https://img.shields.io/badge/Three.js-r161-1fd18b?style=flat-square&labelColor=101114)](https://threejs.org/)
-[![Vite](https://img.shields.io/badge/Vite-5-1fd18b?style=flat-square&labelColor=101114)](https://vitejs.dev/)
-[![no ML library](https://img.shields.io/badge/neural%20nets-from%20scratch-1fd18b?style=flat-square&labelColor=101114)](#-the-learned-drivers--from-scratch-no-ml-library)
-[![collisions](https://img.shields.io/badge/9%20scenarios-0%20collisions-1fd18b?style=flat-square&labelColor=101114)](#-proof-that-it-actually-works)
-[![runs](https://img.shields.io/badge/runs-100%25%20client--side-1fd18b?style=flat-square&labelColor=101114)](#run-it)
+<h2 align="center">Two schools of autonomy, <em>side by side</em></h2>
 
-<br/>
+<p align="center">
+  Blueline is a working implementation of the <b>modular autonomy pipeline</b> from real self-driving<br/>
+  research — visualised like a Tesla — plus a second, <em>learned</em> stack you train yourself.<br/>
+  Two entire approaches, directly comparable, at 60&nbsp;FPS in a browser tab.<br/>
+  <sub><b>~6,400 lines of TypeScript. No game engine. No ML library. No server.</b></sub>
+</p>
 
-<img src="docs/media/city.gif" width="840" alt="Blueline driving itself through a city loop" />
+<table>
+<tr>
+<td width="33%" valign="top" align="center">
 
-<sub><i>Real-time: a Frenet lattice planner picks the green ribbon, Stanley + PID steer it, Kalman tracks the traffic — the ego drives the city block on its own.</i></sub>
+### 🧭 Classical stack
+Every named algorithm, wired end to end — **Frenet** lattice planning, **IDM/MOBIL** traffic, **Kalman** tracking, **Stanley** control. Verified headless in Node.
+
+</td>
+<td width="33%" valign="top" align="center">
+
+### 🧠 Learned stack
+A pure-TS **MLP** (backprop + Adam) trained by **behavioural cloning + DAgger**, and a policy found by **neuroevolution** — no teacher, no framework.
+
+</td>
+<td width="33%" valign="top" align="center">
+
+### 📊 Scorecard + race
+Live **safety / comfort / efficiency** scoring, and a head-to-head **benchmark** of all three drivers on one identical seeded course.
+
+</td>
+</tr>
+</table>
 
 <br/><br/>
 
-**[▸ How it works](#the-modular-autonomy-pipeline) · [▸ Watch it drive](#-watch-it-drive) · [▸ The neural drivers](#-the-learned-drivers--from-scratch-no-ml-library) · [▸ Proof](#-proof-that-it-actually-works) · [▸ Run it](#run-it)**
-
-</div>
-
----
-
-## This is not a car game
-
-Blueline is a working implementation of the **modular autonomy pipeline** used in real
-self-driving research — perception → tracking → prediction → behaviour → planning →
-control — visualised like a Tesla. Then it adds a second, *learned* stack: a neural
-network you can **train by imitation**, **evolve from random weights**, hand the wheel
-to, and **benchmark head-to-head** against the hand-engineered planner.
-
-Two entire schools of autonomy, side by side, directly comparable, running at 60 FPS
-in a browser tab. **~6,400 lines of TypeScript. No game engine. No ML library. No server.**
-
-<table>
-<tr>
-<td width="33%" valign="top">
-
-### 🧭 Classical stack
-Every named algorithm, wired end to end — **Frenet** lattice planning, **IDM/MOBIL**
-traffic, **Kalman** tracking, **Stanley** control. Verified headless.
-
-</td>
-<td width="33%" valign="top">
-
-### 🧠 Learned stack
-A pure-TS **MLP** (backprop + Adam) trained by **behavioural cloning + DAgger**, and a
-policy discovered by **neuroevolution** — no teacher, no framework.
-
-</td>
-<td width="33%" valign="top">
-
-### 📊 Scorecard + benchmark
-Live **safety / comfort / efficiency** scoring, and a head-to-head race of all three
-drivers on one **identical seeded course**.
-
-</td>
-</tr>
-</table>
-
----
-
-## 🎬 Watch it drive
+<h2 align="center">🎬 Watch it <em>drive</em></h2>
 
 <table>
 <tr>
 <td width="50%" align="center">
-<img src="docs/media/streets.gif" width="100%" alt="City streets, chase cam" /><br/>
-<sub><b>Chase cam</b> — cruising the block, lane markings, live HUD telemetry.</sub>
+<img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/streets.gif" width="100%" alt="Chase-cam view cruising the city block with live HUD telemetry"/><br/>
+<sub><b>Chase cam</b> — cruising the block, lane markings, live telemetry.</sub>
 </td>
 <td width="50%" align="center">
-<img src="docs/media/neural.gif" width="100%" alt="Neural network driving after training" /><br/>
-<sub><b>Neural net at the wheel</b> — trained live (see the loss curve fall), then driving.</sub>
+<img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/neural.gif" width="100%" alt="A from-scratch neural network driving after training, with its loss curve falling in real time"/><br/>
+<sub><b>Neural net at the wheel</b> — trained live (watch the loss fall), then driving.</sub>
 </td>
 </tr>
 <tr>
 <td width="50%" align="center">
-<img src="docs/media/map.png" width="100%" alt="Top-down city junction with radar and cross-streets" /><br/>
-<sub><b>Top-down</b> — a rounded 90° junction, cross-streets, radar minimap, occupancy grid.</sub>
+<img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/map.png" width="100%" alt="Top-down view of a rounded 90-degree junction with cross-streets, radar minimap, and occupancy grid"/><br/>
+<sub><b>Top-down</b> — a rounded 90° junction, cross-streets, radar, occupancy grid.</sub>
 </td>
 <td width="50%" align="center">
-<img src="docs/media/rain.png" width="100%" alt="Rain weather degrading the sensor range" /><br/>
-<sub><b>Rain</b> — weather physically <i>degrades sensor range</i> (95 m → 68 m) and adds caution.</sub>
+<img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/rain.png" width="100%" alt="Rain weather that physically degrades the sensor range from 95 to 68 metres"/><br/>
+<sub><b>Rain</b> — weather physically <i>degrades sensor range</i> (95 m → 68 m).</sub>
 </td>
 </tr>
 </table>
 
----
+<br/><br/>
 
-## The modular autonomy pipeline
+<h2 align="center">The <em>modular</em> autonomy pipeline</h2>
 
-Every arrow below is a real module. The ego **never** reads ground truth — it plans off
-noisy sensor detections fused by a Kalman tracker, exactly like the real thing.
+<p align="center">
+  Every arrow is a real module. The ego <b>never reads ground truth</b> — it plans off noisy<br/>
+  sensor detections fused by a Kalman tracker, exactly like the real thing.
+</p>
 
 ```mermaid
 %%{init: {'theme':'base','themeVariables':{'primaryColor':'#1b1d22','primaryTextColor':'#e8eaed','primaryBorderColor':'#1fd18b','lineColor':'#5fe6ad','fontSize':'14px'}}}%%
@@ -157,25 +160,27 @@ exactly why every claim below is a passing test, not a screenshot.
 
 </details>
 
----
+<br/><br/>
 
-## 🧠 The learned drivers — from scratch, no ML library
+<h2 align="center">🧠 The <em>learned</em> drivers — no ML library</h2>
 
-A pure-TypeScript MLP with backprop + Adam ([`learn/NN.ts`](src/learn/NN.ts)) learns to
-drive from a 16-feature view of the road ([`learn/features.ts`](src/learn/features.ts)).
-Two ways to teach it — **watch the loss curve fall in real time**:
+<p align="center">
+  A pure-TypeScript MLP with backprop + Adam (<a href="src/learn/NN.ts"><code>learn/NN.ts</code></a>) learns to drive from a<br/>
+  16-feature view of the road. Two ways to teach it — <b>watch the loss curve fall in real time.</b>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/neural.gif" width="80%" alt="The neural driver panel: loss curve falling to 0.0144 over 29,400 samples, NEURAL NET at the wheel, drive score 84"/>
+</p>
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
 ### 🎓 Imitation + DAgger
-The classical stack drives; the network records `(state → action)` demonstrations and
-clones them. Then **DAgger** flips it — the *learner* drives while the *expert* labels the
-states it actually visits, curing the covariate-shift drift that sinks naive cloning.
+The classical stack drives; the network records `(state → action)` demonstrations and clones them. Then **DAgger** flips it — the *learner* drives while the *expert* labels the states it actually visits, curing the covariate-shift drift that sinks naive cloning.
 
-> **Result:** holds its lane at **max 0.99 m** off centre (lane half-width 5.55 m) over
-> **1.05 km**, **0 collisions**.
+> **Result:** holds its lane at **max 0.99 m** off centre (half-width 5.55 m) over **1.05 km**, **0 collisions.**
 
 → [`ImitationAgent.ts`](src/learn/ImitationAgent.ts) · [`Trainer.ts`](src/learn/Trainer.ts)
 
@@ -183,12 +188,9 @@ states it actually visits, curing the covariate-shift drift that sinks naive clo
 <td width="50%" valign="top">
 
 ### 🧬 Neuroevolution — no teacher
-A genetic algorithm evolves the network weights, scored purely by driving-rollout fitness
-(distance minus penalties for leaving the road or hitting traffic). Selection + crossover
-+ mutation discover a driver **from random weights**.
+A genetic algorithm evolves the weights, scored purely by driving-rollout fitness (distance minus penalties for leaving the road or hitting traffic). Selection + crossover + mutation discover a driver **from random weights.**
 
-> **Result:** fitness climbs **53 → 378** over 16 generations; the champion then drives
-> **1.52 km** with **0 collisions**.
+> **Result:** fitness climbs **53 → 378** over 16 generations; the champion then drives **1.52 km**, **0 collisions.**
 
 → [`Evolution.ts`](src/learn/Evolution.ts)
 
@@ -196,24 +198,27 @@ A genetic algorithm evolves the network weights, scored purely by driving-rollou
 </tr>
 </table>
 
-A **safety shield** (AEB + lane-keeping assist + virtual guardrail) guards the learned
-drivers in play — but is switched **off** during evolution so fitness judges the raw
-policy, not the shield. Toggle **Classical ↔ Neural Net ↔ Evolved** any time and feel a
-different brain take the wheel.
+<p align="center">
+  A <b>safety shield</b> (AEB + lane-keeping + virtual guardrail) guards the learned drivers in play —<br/>
+  but switches <b>off</b> during evolution, so fitness judges the raw policy, not the shield.
+</p>
 
----
+<br/><br/>
 
-## 📊 Proof that it actually works
+<h2 align="center">📊 <em>Proof</em> it actually works</h2>
 
-Everything is verified **headless and deterministically** in Node (seeded RNG) — no
-browser, no hand-waving. Run any of these yourself (see [Run it](#run-it)).
+<p align="center">
+  Everything is verified <b>headless and deterministically</b> in Node (seeded RNG) — no browser,<br/>
+  no hand-waving. Reproduce every number yourself (see <a href="#run-it">Run it</a>).
+</p>
 
-<div align="center">
-<img src="docs/media/benchmark.png" width="720" alt="Head-to-head driver benchmark: Classical 78, Neural Net 75, Evolved 62" /><br/>
-<sub><b>In-browser head-to-head</b> — all three drivers over one identical seeded course. Classical wins on balance; the evolved policy is fastest but rougher. All three: <b>zero collisions.</b></sub>
-</div>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/benchmark.png" width="760" alt="In-browser head-to-head benchmark: Classical 78 (winner), Neural Net 75, Evolved 62 — all with zero collisions over one identical seeded course"/>
+</p>
 
-<br/>
+<p align="center">
+  <sub><b>In-browser head-to-head</b> — all three drivers over one identical seeded course. Classical wins on balance;<br/>the evolved policy is fastest but rougher. All three: <b>zero collisions.</b></sub>
+</p>
 
 **`smoke.ts` — the classical stack across 9 scenarios**
 
@@ -259,20 +264,25 @@ EVO-TEST PASS
 </tr>
 </table>
 
-Plus `lights-test.ts` (stops on red, goes on green) and `weather-test.ts` (rain/fog
-degrade the sensor). **All green.**
+<p align="center">
+  Plus <code>lights-test.ts</code> (stops on red, goes on green) and <code>weather-test.ts</code> (rain/fog degrade the sensor). <b>All green.</b>
+</p>
 
----
+<br/><br/>
 
-## 🎬 Scenarios — one click each
+<h2 align="center">🎬 One-click <em>scenarios</em></h2>
 
-`Highway` · `Trucks` (overtake a convoy) · `Stalled` car · `Cut-in` · `Dense` traffic ·
-`Crossing` pedestrian · **`Occluded ped`** (steps out from behind a stalled car, seen
-late) · `Jaywalker` (emergency stop) · **`🚦 Lights`** · **`🌆 Rush hour`**.
+<p align="center">
+  <code>Highway</code> · <code>Trucks</code> (overtake a convoy) · <code>Stalled</code> car · <code>Cut-in</code> · <code>Dense</code> traffic ·<br/>
+  <code>Crossing</code> pedestrian · <b><code>Occluded ped</code></b> (steps out from behind a stalled car, seen late) ·<br/>
+  <code>Jaywalker</code> (emergency stop) · <b><code>🚦 Lights</code></b> · <b><code>🌆 Rush hour</code></b>
+</p>
 
-Deep-link any of them: `?scenario=occluded&cam=top&weather=rain`.
+<p align="center">
+  Deep-link any of them: <code>?scenario=occluded&cam=top&weather=rain</code>
+</p>
 
----
+<br/>
 
 ## Run it
 
@@ -300,21 +310,22 @@ fitness climbs, red light obeyed.
 
 </details>
 
-**Keyboard:** `1–9` scenarios · `T` train · `E` evolve · `C/N/V` switch driver ·
-`Space` pause · `R` reset · `B` benchmark.
+<p align="center">
+  <b>Keyboard</b> &nbsp;·&nbsp; <code>1–9</code> scenarios &nbsp;·&nbsp; <code>T</code> train &nbsp;·&nbsp; <code>E</code> evolve &nbsp;·&nbsp; <code>C/N/V</code> switch driver &nbsp;·&nbsp; <code>Space</code> pause &nbsp;·&nbsp; <code>R</code> reset &nbsp;·&nbsp; <code>B</code> benchmark
+</p>
 
----
+<br/>
 
 ## Under the hood
 
-**TypeScript · Three.js · Vite.** Fixed-timestep deterministic physics & planning,
-decoupled from the render loop. The neural networks — MLP with backprop + Adam, and the
-genetic algorithm — are written by hand; there is **no TensorFlow, no PyTorch, no ONNX**.
-No backend, no build-time secrets. It's a static site.
+**TypeScript · Three.js · Vite.** Fixed-timestep deterministic physics & planning, decoupled
+from the render loop. The neural networks — MLP with backprop + Adam, and the genetic
+algorithm — are written by hand; there is **no TensorFlow, no PyTorch, no ONNX.** No backend,
+no build-time secrets. It's a static site.
 
-The render layer (Three.js + UnrealBloom, the green path ribbon, candidate-trajectory
-viz, the Tesla-style DOM HUD) is a thin skin over a headless core — which is why the same
-code that renders in the browser is the code the tests drive in Node.
+The render layer (Three.js + UnrealBloom, the green path ribbon, candidate-trajectory viz,
+the Tesla-style DOM HUD) is a thin skin over a headless core — which is why the same code that
+renders in the browser is the code the tests drive in Node.
 
 ## Roadmap
 
@@ -331,6 +342,6 @@ code that renders in the browser is the code the tests drive in Node.
 
 <br/>
 
-<div align="center">
-<sub>Built by <a href="https://github.com/codewithfourtix">@codewithfourtix</a> — perception, planning, and a little bit of evolution.</sub>
-</div>
+<p align="center">
+  <sub>Built by <a href="https://github.com/codewithfourtix">@codewithfourtix</a> — perception, planning, and a little bit of evolution.</sub>
+</p>
