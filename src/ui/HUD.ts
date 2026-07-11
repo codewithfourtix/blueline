@@ -88,7 +88,8 @@ export class HUD {
     this.pill.classList.toggle("warn", yielding);
     this.pillText.textContent = label[t.behaviorState] ?? "SELF-DRIVING";
 
-    this.rows.driver.textContent = t.controlMode === "learned" ? "NEURAL NET 🧠" : "Classical";
+    this.rows.driver.textContent =
+      t.controlMode === "learned" ? "NEURAL NET 🧠" : t.controlMode === "external" ? "EVOLVED 🧬" : "Classical";
     this.rows.behav.textContent = t.behaviorState;
     this.rows.behav.classList.toggle("blue", !emergency && !yielding);
     this.rows.tracks.textContent = `${t.trackedCount}${t.usePerception ? "" : " (GT)"}`;
