@@ -16,6 +16,8 @@ import { BuildingsView } from "./render/BuildingsView.ts";
 import { PedestrianView } from "./render/PedestrianView.ts";
 import { TrafficLightView } from "./render/TrafficLightView.ts";
 import { TrailView } from "./render/TrailView.ts";
+import { CrossStreetView } from "./render/CrossStreetView.ts";
+import { DEFAULT_TRACK } from "./world/track.ts";
 import { HUD } from "./ui/HUD.ts";
 import { ControlPanel } from "./ui/ControlPanel.ts";
 import { LearningPanel } from "./ui/LearningPanel.ts";
@@ -56,7 +58,9 @@ function boot(): void {
   const lightView = new TrafficLightView(sim.path, sim.road.totalWidth / 2);
   const trailView = new TrailView();
 
+  const crossStreets = new CrossStreetView(sim.path, DEFAULT_TRACK.junctions, sim.road.totalWidth / 2);
   scene.add(buildings.group);
+  scene.add(crossStreets.group);
   scene.add(road.group);
   scene.add(lightView.group);
   scene.add(trailView.mesh);

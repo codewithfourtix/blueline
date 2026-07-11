@@ -14,7 +14,7 @@ export class TracksView {
 
   constructor() {
     const mat = new THREE.LineBasicMaterial({
-      color: 0x66d9ff,
+      color: 0x5fe6ad,
       transparent: true,
       opacity: 0.85,
       depthWrite: false,

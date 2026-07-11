@@ -28,7 +28,7 @@ import { ImitationAgent } from "../learn/ImitationAgent.ts";
 import { DriveContext, extractFeatures } from "../learn/features.ts";
 import { MLP } from "../learn/NN.ts";
 import { Metrics } from "./Metrics.ts";
-import { clamp, wrapAngle, mod, wrapDiff } from "../core/math.ts";
+import { clamp, wrapAngle, mod, wrapDiff, smoothTowards } from "../core/math.ts";
 
 export type ControlMode = "classical" | "learned" | "external";
 export type Policy = (features: number[]) => { steer: number; accel: number };
@@ -81,6 +81,8 @@ export class Simulation {
   private weatherSpeedFactor = 1;
   private baseDesiredSpeed: number;
   private lastObstacles: Obstacle[] = [];
+  private junctionStations: number[] = [];
+  private trackLaneD = 0; // smoothly-eased lane-centre the controller tracks
 
   plan: Trajectory | null = null;
   candidates: Trajectory[] = [];
@@ -102,8 +104,13 @@ export class Simulation {
   constructor(config: Partial<SimConfig> = {}) {
     this.config = { ...DEFAULT_SIM, ...config };
 
-    this.path = new ReferencePath(DEFAULT_TRACK.controlPoints, 40);
+    this.path = new ReferencePath(DEFAULT_TRACK.controlPoints, 6);
     this.road = new Road(this.path, this.config.numLanes, this.config.laneWidth);
+
+    // A traffic light on the approach to each city junction (corner).
+    this.junctionStations = DEFAULT_TRACK.junctions.map(([cx, cy]) =>
+      mod(this.path.toFrenet(cx, cy).s - 24, this.path.length),
+    );
 
     // Place the ego on the centre lane, aligned with the road.
     const start = this.path.toCartesian(0, this.road.laneCenter(Math.floor(this.config.numLanes / 2)));
@@ -113,6 +120,7 @@ export class Simulation {
 
     this.traffic = new TrafficManager(this.road);
     this.traffic.spawn(this.config.trafficCount);
+    this.trafficLights = this.makeJunctionLights();
 
     this.planner = new FrenetPlanner(this.road, {
       desiredSpeed: this.config.egoDesiredSpeed,
@@ -179,6 +187,7 @@ export class Simulation {
     this.speedPID.reset();
     this.distance = 0;
     this.lastEgoIndex = -1;
+    this.trackLaneD = this.road.laneCenter(mid);
     this.configureScenario(mid);
     this.tracker.reset();
     this.tracks = [];
@@ -188,11 +197,18 @@ export class Simulation {
     this.replan();
   }
 
+  /** Traffic lights guarding each city junction (mostly green, staggered). */
+  private makeJunctionLights(): TrafficLight[] {
+    return this.junctionStations.map(
+      (s, i) => new TrafficLight(s, { green: 13, yellow: 2, red: 6, offset: i * 6 }),
+    );
+  }
+
   /** Set up traffic AND pedestrians for the current scenario. */
   private configureScenario(mid: number): void {
     const half = this.road.totalWidth / 2;
     this.pedestrians.clear();
-    this.trafficLights = [];
+    this.trafficLights = this.makeJunctionLights();
     switch (this.scenario) {
       case "crossing": {
         // A pedestrian using a crosswalk ahead — the ego must stop and yield.
@@ -219,14 +235,14 @@ export class Simulation {
       case "lights":
         // A signalised intersection: the ego must stop on red, go on green.
         this.traffic.spawn(8);
-        this.trafficLights = [new TrafficLight(150, { green: 7, yellow: 2, red: 12, offset: 8 })];
+        this.trafficLights.push(new TrafficLight(150, { green: 7, yellow: 2, red: 12, offset: 8 }));
         break;
       case "rush": {
         // Rush hour — everything at once: dense traffic, a pedestrian crossing,
         // and a signalised intersection further on.
         this.traffic.spawn(26);
         this.pedestrians.add({ s: 95, fromD: half + 3, toD: -half - 3, speed: 1.4, wait: 2 });
-        this.trafficLights = [new TrafficLight(210, { green: 8, yellow: 2, red: 10, offset: 6 })];
+        this.trafficLights.push(new TrafficLight(210, { green: 8, yellow: 2, red: 10, offset: 6 }));
         // Keep the ego's lane clear at the crosswalk so the yield is unobstructed.
         const L = this.path.length;
         const start = mod(95 - 65, L);
@@ -477,10 +493,13 @@ export class Simulation {
       const fx = this.ego.x + (wb / 2) * Math.cos(this.ego.yaw);
       const fy = this.ego.y + (wb / 2) * Math.sin(this.ego.yaw);
       const ff = this.path.toFrenet(fx, fy, -1);
-      const targetLaneD = this.road.laneCenter(this.plan.targetLane);
+      // Ease the tracked lane centre toward the planner's target lane, so a lane
+      // change glides over ~2 s instead of jerking the wheel a full lane width.
+      const goalLaneD = this.road.laneCenter(this.plan.targetLane);
+      this.trackLaneD = smoothTowards(this.trackLaneD, goalLaneD, 1.6, dt);
       const roadHeading = this.path.cartesianAt(ff.s).heading;
       const headingErr = wrapAngle(roadHeading - this.ego.yaw);
-      const crossTrack = ff.d - targetLaneD; // +ve when ego is left of lane centre
+      const crossTrack = ff.d - this.trackLaneD; // +ve when ego is left of tracked centre
       classicalSteer = stanleyControl(headingErr, crossTrack, this.ego.v, this.steerConfig);
       // Never target above the current desired-speed cap, so a stop command
       // (red light / yield / emergency) takes effect without the look-ahead lag.

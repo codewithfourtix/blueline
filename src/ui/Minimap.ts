@@ -37,7 +37,7 @@ export class Minimap {
 
     ctx.clearRect(0, 0, SIZE, SIZE);
     // Backdrop + range rings.
-    ctx.fillStyle = "rgba(10,16,26,0.85)";
+    ctx.fillStyle = "rgba(15,16,19,0.85)";
     ctx.beginPath();
     ctx.arc(c, c, c - 1, 0, Math.PI * 2);
     ctx.fill();
@@ -110,7 +110,7 @@ export class Minimap {
     ctx.restore();
 
     // Ego triangle (always centre, pointing up).
-    ctx.fillStyle = "#2e8bff";
+    ctx.fillStyle = "#1fd18b";
     ctx.beginPath();
     ctx.moveTo(c, c - 6);
     ctx.lineTo(c - 4.5, c + 5);
