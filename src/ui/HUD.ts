@@ -37,6 +37,7 @@ export class HUD {
         <div class="trow"><span class="k">Target speed</span><span class="v blue" id="t-target">–</span></div>
         <div class="trow"><span class="k">Lane</span><span class="v" id="t-lane">–</span></div>
         <div class="trow"><span class="k">Tracked objects</span><span class="v" id="t-tracks">–</span></div>
+        <div class="trow"><span class="k">Pedestrians</span><span class="v" id="t-peds">–</span></div>
         <div class="trow"><span class="k">Sensor range</span><span class="v" id="t-sensor">–</span></div>
         <div class="trow"><span class="k">Acceleration</span><span class="v" id="t-accel">–</span></div>
         <div class="trow"><span class="k">Steering</span><span class="v" id="t-steer">–</span></div>
@@ -56,6 +57,7 @@ export class HUD {
     this.rows = {
       behav: document.getElementById("t-behav")!,
       tracks: document.getElementById("t-tracks")!,
+      peds: document.getElementById("t-peds")!,
       sensor: document.getElementById("t-sensor")!,
       target: document.getElementById("t-target")!,
       lane: document.getElementById("t-lane")!,
@@ -76,14 +78,18 @@ export class HUD {
       FOLLOW: "FOLLOWING",
       OVERTAKE: "OVERTAKING",
       EMERGENCY: "EMERGENCY STOP",
+      YIELD: "YIELDING — PEDESTRIAN",
     };
     const emergency = t.behaviorState === "EMERGENCY";
+    const yielding = t.behaviorState === "YIELD";
     this.pill.classList.toggle("alert", emergency);
+    this.pill.classList.toggle("warn", yielding);
     this.pillText.textContent = label[t.behaviorState] ?? "SELF-DRIVING";
 
     this.rows.behav.textContent = t.behaviorState;
-    this.rows.behav.classList.toggle("blue", !emergency);
+    this.rows.behav.classList.toggle("blue", !emergency && !yielding);
     this.rows.tracks.textContent = `${t.trackedCount}${t.usePerception ? "" : " (GT)"}`;
+    this.rows.peds.textContent = `${t.pedCount}`;
     this.rows.sensor.textContent = `${Math.round(t.sensorRange)} m`;
     this.rows.target.textContent = `${Math.round(mps2kph(t.targetSpeed))} km/h`;
     this.rows.lane.textContent = `${t.lane + 1} / ${laneCount}`;
