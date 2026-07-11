@@ -1,75 +1,97 @@
 # 🔵 Blueline — Autonomous Driving Simulator
 
-**A self-driving car, in your browser — running a real autonomous-vehicle software stack, visualised like a Tesla.**
+**A self-driving car, in your browser — running a real autonomous-vehicle software
+stack, *and* neural drivers you train live, visualised like a Tesla.**
 
-Blueline is not a car *game*. It is a working implementation of the same
-modular autonomy pipeline used in real self-driving research — **perception →
-tracking → prediction → behaviour → planning → control** — wrapped in a clean,
-Tesla-inspired 3D visualisation. A simulated sensor sees nearby traffic through
-noise and occlusion, a bank of Kalman filters tracks each object and estimates
-its velocity, a behaviour state machine decides the manoeuvre, and a Frenet
-lattice planner draws the optimal path in real time (the glowing **blue line**)
-which the car then steers and brakes itself to follow. All at 60 FPS, entirely
-client-side.
+Blueline is not a car *game*. It is a working implementation of the modular
+autonomy pipeline used in real self-driving research — **perception → tracking →
+prediction → behaviour → planning → control** — plus a second, learned stack: a
+neural network you can **train by imitation** or **evolve from scratch**, hand the
+wheel to, and **benchmark head-to-head** against the classical planner. Everything
+runs entirely client-side, at 60 FPS, with no ML library.
 
 > **Deploy:** it's a static site — `npm run build` produces `dist/`, which drops
-> straight onto any static host (Vercel, Netlify, Cloudflare Pages, S3, …).
+> onto any static host (Vercel, Netlify, Cloudflare Pages, S3, …).
 
 ---
 
-## What it actually does
+## What makes it special
 
-- 👁️ **Perceives, doesn't cheat.** A simulated range sensor only reports cars
-  within range and line-of-sight, with Gaussian noise. A **Kalman-filter
-  multi-object tracker** turns those messy detections into stable tracks with
-  estimated velocity — and coasts through brief occlusions. The planner drives
-  off these tracks, not ground truth (toggle to compare).
-- 🧠 **Plans in real time.** A **Frenet-frame lattice planner** generates dozens
-  of candidate trajectories every cycle, scores each on comfort, speed, and
-  safety, rejects any that collide with *predicted* traffic, and renders the
-  winner as the blue path — the technique from Werling et al. (ICRA 2010).
-- 🚦 **Decides like a driver.** A **behaviour state machine** (CRUISE / FOLLOW /
-  OVERTAKE / EMERGENCY) sits above the planner: it does proper adaptive-cruise
-  following, pulls out to overtake when a lane is clear, and hard-stops for
-  hazards. The current state is shown live in the HUD.
-- 🚗 **Drives itself.** **Pure Pursuit** geometric steering + a **PID** speed
-  controller track the planned path via a **kinematic bicycle model**.
-- 🛣️ **Shares the road.** Ambient traffic runs the **Intelligent Driver Model
-  (IDM)** for car-following and **MOBIL** for lane-change decisions — the
-  standard models from traffic-flow research — and reacts to the ego too.
-- 🚸 **Yields to pedestrians.** A **YIELD** behaviour stops for people crossing —
-  including the textbook hard case of a pedestrian stepping out from behind a
-  **stalled car** (seen late through sensor occlusion) and a **jaywalker** darting
-  across (a full emergency stop).
-- 🎬 **Scenarios.** One click to throw a **slow truck convoy**, a **stalled car**,
-  an **aggressive cut-in**, **dense traffic**, a **pedestrian crossing**, an
-  **occluded pedestrian**, or a **jaywalker** at the planner.
-- 👁️ **Shows its thinking.** Toggle overlays for the planner's full candidate
-  lattice, the perceived **track boxes + velocity vectors**, the **occupancy
-  grid**, and the **sensor range** — watch the autonomy reason in real time.
+Most "self-driving simulators" are one of two things: a scripted animation, or a
+toy neural net that learns to stay on a line. Blueline is both halves of the real
+field, side by side and directly comparable:
+
+- 🧠 **A hand-engineered classical stack** with every named algorithm — Frenet
+  lattice planning, IDM/MOBIL traffic, Kalman tracking, Stanley control.
+- 🎓 **A learned stack built from scratch** — an MLP trained by **behavioural
+  cloning + DAgger**, and a policy discovered by **neuroevolution** with no teacher.
+- 📊 **A scorecard + benchmark** that scores safety / comfort / efficiency and puts
+  Classical vs Neural Net vs Evolved on the same seeded course to see who wins.
 
 ---
 
-## The autonomy stack
+## The classical autonomy stack
 
 | Layer | Technique | Where |
 |---|---|---|
-| **World / road model** | Closed-loop centreline with arc-length **Frenet frame** (station `s`, lateral `d`) | [`world/ReferencePath.ts`](src/world/ReferencePath.ts) |
-| **Perception (sensing)** | Range + line-of-sight **sensor** with Gaussian noise & occlusion | [`perception/Sensor.ts`](src/perception/Sensor.ts) |
-| **Perception (tracking)** | **Kalman-filter** multi-object tracker (constant-velocity), NN data association, track lifecycle | [`perception/Tracker.ts`](src/perception/Tracker.ts) |
-| **Occupancy** | Ego-centred **occupancy grid** from tracks | [`perception/OccupancyGrid.ts`](src/perception/OccupancyGrid.ts) |
-| **Prediction** | Constant-velocity roll of each track's *estimated* velocity | [`planner/FrenetPlanner.ts`](src/planner/FrenetPlanner.ts) |
-| **Behaviour** | **FSM**: CRUISE / FOLLOW / OVERTAKE / EMERGENCY | [`behavior/BehaviorPlanner.ts`](src/behavior/BehaviorPlanner.ts) |
-| **Planning** | **Frenet lattice**: quintic (lateral) + quartic (longitudinal) polynomials, cost-based selection, collision checking | [`planner/FrenetPlanner.ts`](src/planner/FrenetPlanner.ts) · [`core/poly.ts`](src/core/poly.ts) |
-| **Control** | **Pure Pursuit** steering + **PID** speed | [`control/`](src/control) |
-| **Vehicle model** | **Kinematic bicycle model** | [`vehicle/Vehicle.ts`](src/vehicle/Vehicle.ts) |
-| **Traffic** | **IDM** (following) + **MOBIL** (lane changes) + scenarios | [`traffic/`](src/traffic) |
-| **Visualisation** | Three.js + UnrealBloom, perception overlays, Tesla-style HUD | [`render/`](src/render) · [`ui/`](src/ui) |
+| **World model** | Closed-loop centreline with arc-length **Frenet frame** (station `s`, lateral `d`) + curvature | [`world/ReferencePath.ts`](src/world/ReferencePath.ts) |
+| **Perception — sensing** | Range + line-of-sight **sensor** with Gaussian noise, occlusion & dropout | [`perception/Sensor.ts`](src/perception/Sensor.ts) |
+| **Perception — tracking** | **Kalman-filter** multi-object tracker (const-velocity), NN association, track lifecycle, object classes | [`perception/Tracker.ts`](src/perception/Tracker.ts) |
+| **Occupancy** | Ego-centred **occupancy grid** | [`perception/OccupancyGrid.ts`](src/perception/OccupancyGrid.ts) |
+| **Prediction** | Constant-velocity roll of each track's *estimated* velocity (lateral for pedestrians) | [`planner/FrenetPlanner.ts`](src/planner/FrenetPlanner.ts) |
+| **Behaviour** | **FSM**: CRUISE / FOLLOW / OVERTAKE / EMERGENCY / YIELD / STOP | [`behavior/BehaviorPlanner.ts`](src/behavior/BehaviorPlanner.ts) |
+| **Planning** | **Frenet lattice**: quintic + quartic polynomials, cost-based selection, collision checking | [`planner/FrenetPlanner.ts`](src/planner/FrenetPlanner.ts) · [`core/poly.ts`](src/core/poly.ts) |
+| **Control** | **Stanley** lateral tracker + **PID** speed | [`control/`](src/control) |
+| **Vehicle** | **Kinematic bicycle model** | [`vehicle/Vehicle.ts`](src/vehicle/Vehicle.ts) |
+| **Traffic** | **IDM** (car-following) + **MOBIL** (lane changes) | [`traffic/`](src/traffic) |
+| **Urban** | **Traffic lights** with stop-line planning | [`world/TrafficLight.ts`](src/world/TrafficLight.ts) |
 
-The entire simulation core (`src/core`, `world`, `vehicle`, `control`,
-`traffic`, `perception`, `behavior`, `planner`, `sim`) is **decoupled from the
-renderer** — it imports no Three.js and runs headless, which is why the full
-stack can be smoke-tested in Node.
+The entire simulation core imports **no Three.js** and runs headless — which is
+why the whole stack (including the learned drivers) is verified in Node.
+
+---
+
+## 🧠 The learned drivers (from scratch — no ML library)
+
+A pure-TypeScript MLP with backprop + Adam ([`learn/NN.ts`](src/learn/NN.ts)) that
+learns to drive from a 16-feature view of the road ([`learn/features.ts`](src/learn/features.ts)):
+
+### Imitation learning (+ DAgger)
+Click **Train** and watch it: the classical stack drives while the network records
+`(state → action)` demonstrations; the net trains by behavioural cloning; then
+**DAgger** takes over — the *learner* drives while the *expert* labels the states
+it actually visits, fixing the covariate-shift problem that makes naive cloning
+drift off the road. The result holds its lane with **0 collisions**.
+→ [`learn/ImitationAgent.ts`](src/learn/ImitationAgent.ts) · [`learn/Trainer.ts`](src/learn/Trainer.ts)
+
+### Neuroevolution (no teacher at all)
+Click **Evolve** and watch generations improve live: a genetic algorithm evolves
+network weights, scored by driving-rollout fitness (distance minus penalties for
+leaving the road / hitting traffic). Selection + crossover + mutation discover a
+driving policy **from random weights, with no expert** — survival of the fittest.
+→ [`learn/Evolution.ts`](src/learn/Evolution.ts)
+
+Toggle **Classical ↔ Neural Net ↔ Evolved** any time and watch a different brain
+take the wheel.
+
+---
+
+## 📊 Analytics
+
+- **Live Drive Score** — safety / comfort / efficiency (0–100), resets per driver
+  so you can *feel* the difference. → [`sim/Metrics.ts`](src/sim/Metrics.ts)
+- **Driver benchmark** — runs each available driver over an **identical seeded
+  course** and crowns a winner. → [`learn/Benchmark.ts`](src/learn/Benchmark.ts)
+- **Cockpit minimap** radar + full autonomy telemetry.
+
+---
+
+## 🎬 Scenarios (one click each)
+
+`Highway` · `Trucks` (overtake a convoy) · `Stalled` car · `Cut-in` · `Dense`
+traffic · `Crossing` pedestrian · **`Occluded ped`** (steps out from behind a
+stalled car — seen late) · `Jaywalker` (emergency stop) · **`🚦 Lights`** (stop on
+red, go on green). Deep-link any with `?scenario=occluded` (add `&cam=top`).
 
 ---
 
@@ -78,53 +100,45 @@ stack can be smoke-tested in Node.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-```
-
-```bash
 npm run build      # typecheck + production bundle -> dist/
-npm run typecheck  # tsc --noEmit
 ```
 
-### Headless smoke test
-
-Runs the full stack (sensor → tracking → behaviour → planning → control) with no
-browser across **four scenarios**, and asserts it stays numerically healthy,
-perceives traffic, and — crucially — **hits zero collisions**, including
-avoiding the stalled car and surviving the cut-in:
+### Headless verification (no browser, deterministic)
 
 ```bash
-npx esbuild scripts/smoke.ts --bundle --platform=node --format=esm --outfile=smoke.mjs && node smoke.mjs
+# full driving stack across 8 scenarios: on-road, zero vehicle & pedestrian collisions
+npx esbuild scripts/smoke.ts       --bundle --platform=node --format=esm --outfile=smoke.mjs && node smoke.mjs
+# the neural net learns to drive (imitation + DAgger)
+npx esbuild scripts/learn-test.ts  --bundle --platform=node --format=esm --outfile=learn.mjs && node learn.mjs
+# neuroevolution discovers a driver from scratch
+npx esbuild scripts/evo-test.ts    --bundle --platform=node --format=esm --outfile=evo.mjs   && node evo.mjs
+# ego obeys the traffic light
+npx esbuild scripts/lights-test.ts --bundle --platform=node --format=esm --outfile=lt.mjs    && node lt.mjs
 ```
 
-```
-[trucks]
-  distance         : 1.04 km
-  lane changes     : 5
-  max tracks       : 5
-  behaviour states : CRUISE, OVERTAKE, FOLLOW, EMERGENCY
-  crash steps      : 0
-
-SMOKE PASS — all scenarios healthy, zero collisions.
-```
+Each asserts real, measurable behaviour (stays on road, zero collisions, network
+loss falls, evolution fitness climbs, red light obeyed).
 
 ---
 
 ## Tech
 
-**TypeScript · Three.js · Vite.** No backend, no build-time secrets, deploys as
-a static site. Sim runs on a fixed timestep (deterministic physics/planning)
-decoupled from the render loop.
+**TypeScript · Three.js · Vite.** No backend, no ML library, no build-time secrets.
+The neural networks (MLP + Adam + backprop, and a genetic algorithm) are written
+from scratch. Fixed-timestep deterministic physics/planning, decoupled from the
+render loop.
 
 ## Roadmap
 
-- [x] **Sensor + Kalman tracking** perception (v2) — ego drives off estimates, not truth
-- [x] **Behaviour FSM** + adaptive-cruise following (v2)
-- [x] **Occupancy grid** + scenario library: trucks, stalled car, cut-in, dense (v2)
-- [x] **Vulnerable road users + hard cases** (v3): pedestrians, YIELD behaviour, and
-      the *crossing*, *occluded-pedestrian*, and *jaywalker* scenarios — with a
-      simulated sensor that has occlusion + dropout, so pedestrians can be seen late
-- [ ] Traffic lights + intersections + stop-line planning
-- [ ] A learned driving policy (imitation / RL) benchmarked against the classical planner
+- [x] Classical AV stack (Frenet planner, IDM/MOBIL, Stanley + PID, Kalman tracking)
+- [x] Pedestrians + hard cases (crossing / occluded / jaywalker)
+- [x] **Imitation learning** neural driver (behavioural cloning + DAgger)
+- [x] **Neuroevolution** driver (learn from scratch, no teacher)
+- [x] Analytics: live scorecard + head-to-head driver benchmark
+- [x] Urban: traffic lights + stop-line behaviour
+- [ ] Intersections with cross-traffic & turns
+- [ ] Reinforcement learning (policy gradient) driver
+- [ ] Recording & replay
 
 ---
 
