@@ -3,7 +3,7 @@
 // them, and can then drive the car itself. This is the supervised-learning path:
 // the network learns to imitate a known-good driver.
 
-import { MLP } from "./NN.ts";
+import { MLP, MLPState } from "./NN.ts";
 import { FEATURE_SIZE, STEER_NORM, ACCEL_NORM } from "./features.ts";
 import { clamp } from "../core/math.ts";
 
@@ -78,6 +78,12 @@ export class ImitationAgent {
     this.lastLoss = this.losses[this.losses.length - 1];
     this.trained = true;
     return { epochs, finalLoss: this.lastLoss, samples: n, losses: this.losses };
+  }
+
+  /** Load pre-trained weights (e.g. produced by the background Trainer). */
+  loadState(s: MLPState): void {
+    this.net = MLP.fromJSON(s);
+    this.trained = true;
   }
 
   /** Predict a driving action from features. */

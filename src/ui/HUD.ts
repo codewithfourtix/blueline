@@ -33,6 +33,7 @@ export class HUD {
 
       <div class="telemetry panel">
         <h4>AUTONOMY TELEMETRY</h4>
+        <div class="trow"><span class="k">Driver</span><span class="v blue" id="t-driver">–</span></div>
         <div class="trow"><span class="k">Behaviour</span><span class="v blue" id="t-behav">–</span></div>
         <div class="trow"><span class="k">Target speed</span><span class="v blue" id="t-target">–</span></div>
         <div class="trow"><span class="k">Lane</span><span class="v" id="t-lane">–</span></div>
@@ -55,6 +56,7 @@ export class HUD {
     this.pill = document.getElementById("hud-pill")!;
     this.pillText = document.getElementById("hud-pill-text")!;
     this.rows = {
+      driver: document.getElementById("t-driver")!,
       behav: document.getElementById("t-behav")!,
       tracks: document.getElementById("t-tracks")!,
       peds: document.getElementById("t-peds")!,
@@ -86,6 +88,7 @@ export class HUD {
     this.pill.classList.toggle("warn", yielding);
     this.pillText.textContent = label[t.behaviorState] ?? "SELF-DRIVING";
 
+    this.rows.driver.textContent = t.controlMode === "learned" ? "NEURAL NET 🧠" : "Classical";
     this.rows.behav.textContent = t.behaviorState;
     this.rows.behav.classList.toggle("blue", !emergency && !yielding);
     this.rows.tracks.textContent = `${t.trackedCount}${t.usePerception ? "" : " (GT)"}`;
