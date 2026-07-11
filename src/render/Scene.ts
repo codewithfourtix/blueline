@@ -45,6 +45,7 @@ export class Scene {
 
     this.setupLights();
     this.setupGround();
+    this.setupRain();
 
     // Post-processing chain: render -> bloom -> output(color-correct).
     this.composer = new EffectComposer(this.renderer);
@@ -111,6 +112,67 @@ export class Scene {
 
   add(obj: THREE.Object3D): void {
     this.scene.add(obj);
+  }
+
+  // ---- weather -----------------------------------------------------------
+  private rain!: THREE.LineSegments;
+  private rainPos!: Float32Array;
+  private rainOn = false;
+  private readonly RAIN_N = 1800;
+  private readonly RAIN_B = 70;
+  private readonly RAIN_H = 48;
+
+  private setupRain(): void {
+    const n = this.RAIN_N;
+    this.rainPos = new Float32Array(n * 6); // two vertices per drop
+    for (let i = 0; i < n; i++) {
+      const x = (Math.random() * 2 - 1) * this.RAIN_B;
+      const y = Math.random() * this.RAIN_H;
+      const z = (Math.random() * 2 - 1) * this.RAIN_B;
+      const o = i * 6;
+      this.rainPos[o] = x; this.rainPos[o + 1] = y; this.rainPos[o + 2] = z;
+      this.rainPos[o + 3] = x; this.rainPos[o + 4] = y - 1.3; this.rainPos[o + 5] = z;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(this.rainPos, 3));
+    const mat = new THREE.LineBasicMaterial({ color: 0xaebfd8, transparent: true, opacity: 0.34 });
+    this.rain = new THREE.LineSegments(geo, mat);
+    this.rain.frustumCulled = false;
+    this.rain.visible = false;
+    this.scene.add(this.rain);
+  }
+
+  setWeather(w: "clear" | "rain" | "fog"): void {
+    const fog = this.scene.fog as THREE.Fog;
+    if (w === "rain") {
+      fog.near = 55; fog.far = 230;
+      this.renderer.toneMappingExposure = 0.92;
+      this.rainOn = true;
+    } else if (w === "fog") {
+      fog.near = 22; fog.far = 105;
+      this.renderer.toneMappingExposure = 0.98;
+      this.rainOn = false;
+    } else {
+      fog.near = 80; fog.far = 360;
+      this.renderer.toneMappingExposure = 1.05;
+      this.rainOn = false;
+    }
+    this.rain.visible = this.rainOn;
+  }
+
+  updateWeather(dt: number, egoX: number, egoY: number): void {
+    if (!this.rainOn) return;
+    this.rain.position.set(egoX, 0, egoY);
+    const fall = 34 * dt;
+    const p = this.rainPos;
+    for (let i = 0; i < this.RAIN_N; i++) {
+      const o = i * 6;
+      let y = p[o + 1] - fall;
+      if (y < -2) y += this.RAIN_H;
+      p[o + 1] = y;
+      p[o + 4] = y - 1.3;
+    }
+    (this.rain.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true;
   }
 
   /** Reposition the chase/top camera to follow the ego smoothly. */

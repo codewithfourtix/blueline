@@ -72,6 +72,13 @@ export class ControlPanel {
           <button class="bl active" id="c-cam-chase">Chase</button>
           <button class="bl" id="c-cam-top">Top-down</button>
         </div>
+
+        <div class="ctl-label" style="margin-top:2px">Weather</div>
+        <div class="seg" id="c-weather">
+          <button class="seg-btn active" data-w="clear">Clear</button>
+          <button class="seg-btn" data-w="rain">Rain</button>
+          <button class="seg-btn" data-w="fog">Fog</button>
+        </div>
       </div>
       `,
     );
@@ -82,6 +89,20 @@ export class ControlPanel {
     this.wireToggles();
     this.wirePlayReset();
     this.wireCamera();
+    this.wireWeather();
+  }
+
+  private wireWeather(): void {
+    const btns = Array.from(document.querySelectorAll<HTMLButtonElement>("#c-weather .seg-btn"));
+    for (const b of btns) {
+      b.addEventListener("click", () => {
+        btns.forEach((x) => x.classList.remove("active"));
+        b.classList.add("active");
+        const w = b.dataset.w as "clear" | "rain" | "fog";
+        this.sim.setWeather(w);
+        this.scene.setWeather(w);
+      });
+    }
   }
 
   private wireScenarios(): void {
