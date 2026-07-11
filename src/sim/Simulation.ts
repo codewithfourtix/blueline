@@ -27,7 +27,8 @@ import { ImitationAgent } from "../learn/ImitationAgent.ts";
 import { DriveContext, extractFeatures } from "../learn/features.ts";
 import { clamp, wrapAngle, mod } from "../core/math.ts";
 
-export type ControlMode = "classical" | "learned";
+export type ControlMode = "classical" | "learned" | "external";
+export type Policy = (features: number[]) => { steer: number; accel: number };
 import { DEFAULT_SIM, SimConfig } from "./config.ts";
 
 export interface Telemetry {
@@ -65,6 +66,7 @@ export class Simulation {
   readonly imitation: ImitationAgent;
   behaviorState: BehaviorState = "CRUISE";
   controlMode: ControlMode = "classical";
+  externalPolicy: Policy | null = null;
   collecting = false;
   private baseDesiredSpeed: number;
   private lastObstacles: Obstacle[] = [];
@@ -396,6 +398,10 @@ export class Simulation {
     let accel = classicalAccel;
     if (this.controlMode === "learned" && this.imitation.trained) {
       const a = this.imitation.act(feat);
+      steer = a.steer;
+      accel = a.accel;
+    } else if (this.controlMode === "external" && this.externalPolicy) {
+      const a = this.externalPolicy(feat);
       steer = a.steer;
       accel = a.accel;
     }

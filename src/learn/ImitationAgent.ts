@@ -4,8 +4,7 @@
 // the network learns to imitate a known-good driver.
 
 import { MLP, MLPState } from "./NN.ts";
-import { FEATURE_SIZE, STEER_NORM, ACCEL_NORM } from "./features.ts";
-import { clamp } from "../core/math.ts";
+import { FEATURE_SIZE, STEER_NORM, ACCEL_NORM, decodeAction } from "./features.ts";
 
 export interface TrainResult {
   epochs: number;
@@ -88,10 +87,6 @@ export class ImitationAgent {
 
   /** Predict a driving action from features. */
   act(features: number[]): { steer: number; accel: number } {
-    const o = this.net.predict(features);
-    return {
-      steer: clamp(o[0], -1.2, 1.2) * STEER_NORM,
-      accel: clamp(o[1], -1.2, 1.2) * ACCEL_NORM,
-    };
+    return decodeAction(this.net.predict(features));
   }
 }
