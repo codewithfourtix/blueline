@@ -19,6 +19,8 @@ import { HUD } from "./ui/HUD.ts";
 import { ControlPanel } from "./ui/ControlPanel.ts";
 import { LearningPanel } from "./ui/LearningPanel.ts";
 import { Scorecard } from "./ui/Scorecard.ts";
+import { Minimap } from "./ui/Minimap.ts";
+import { IntroOverlay } from "./ui/IntroOverlay.ts";
 
 function boot(): void {
   const canvas = document.getElementById("scene") as HTMLCanvasElement;
@@ -58,6 +60,9 @@ function boot(): void {
 
   const hud = new HUD(uiRoot);
   const scorecard = new Scorecard(uiRoot, sim);
+  const minimap = new Minimap(uiRoot, sim);
+  // eslint-disable-next-line no-new
+  new IntroOverlay(uiRoot);
   // eslint-disable-next-line no-new
   new LearningPanel(uiRoot, sim);
   // eslint-disable-next-line no-new
@@ -101,6 +106,7 @@ function boot(): void {
     scene.updateCamera(sim.ego.x, sim.ego.y, sim.ego.yaw, delta);
     hud.update(sim.telemetry, sim.road.numLanes);
     scorecard.update();
+    minimap.update();
     scene.render();
 
     if (firstFrame && loading) {
