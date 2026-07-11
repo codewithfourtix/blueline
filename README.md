@@ -7,7 +7,7 @@
 <h1 align="center">▍&nbsp;B&nbsp;L&nbsp;U&nbsp;E&nbsp;L&nbsp;I&nbsp;N&nbsp;E</h1>
 
 <p align="center">
-  <a href="https://realblueline.vercel.app"><img src="https://img.shields.io/badge/▶__TRY_THE_LIVE_DEMO-1fd18b?style=for-the-badge&labelColor=0d0e11&color=1fd18b" alt="Try the live demo" height="34"/></a>
+  <a href="https://realblueline.vercel.app"><img src="https://img.shields.io/badge/▶_TRY_THE_LIVE_DEMO-1fd18b?style=for-the-badge&labelColor=0d0e11&color=1fd18b" alt="Try the live demo" height="34"/></a>
 </p>
 
 <p align="center">
