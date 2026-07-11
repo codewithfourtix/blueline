@@ -25,6 +25,7 @@ import { PedestrianManager } from "../pedestrian/PedestrianManager.ts";
 import { BehaviorPlanner, BehaviorState } from "../behavior/BehaviorPlanner.ts";
 import { ImitationAgent } from "../learn/ImitationAgent.ts";
 import { DriveContext, extractFeatures } from "../learn/features.ts";
+import { MLP } from "../learn/NN.ts";
 import { Metrics } from "./Metrics.ts";
 import { clamp, wrapAngle, mod, wrapDiff } from "../core/math.ts";
 
@@ -70,6 +71,7 @@ export class Simulation {
   behaviorState: BehaviorState = "CRUISE";
   controlMode: ControlMode = "classical";
   externalPolicy: Policy | null = null;
+  evolvedChampion: MLP | null = null; // set by the UI after neuroevolution
   collecting = false;
   private baseDesiredSpeed: number;
   private lastObstacles: Obstacle[] = [];

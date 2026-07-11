@@ -108,6 +108,7 @@ export class LearningPanel {
       metric.textContent = `best fitness ${p.bestFitness.toFixed(0)} · avg ${p.avgFitness.toFixed(0)}`;
     });
     this.champion = MLP.fromJSON(state);
+    this.sim.evolvedChampion = this.champion; // expose to the benchmark
     document.getElementById("nn-evo")!.classList.remove("disabled");
     document.getElementById("nn-sub")!.textContent = "evolved from scratch ✓ (no teacher)";
     this.setMode("external");
