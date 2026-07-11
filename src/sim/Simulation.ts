@@ -32,6 +32,7 @@ import { clamp, wrapAngle, mod, wrapDiff } from "../core/math.ts";
 
 export type ControlMode = "classical" | "learned" | "external";
 export type Policy = (features: number[]) => { steer: number; accel: number };
+export type Weather = "clear" | "rain" | "fog";
 import { DEFAULT_SIM, SimConfig } from "./config.ts";
 
 export interface Telemetry {
@@ -75,6 +76,8 @@ export class Simulation {
   externalPolicy: Policy | null = null;
   evolvedChampion: MLP | null = null; // set by the UI after neuroevolution
   collecting = false;
+  weather: Weather = "clear";
+  private weatherSpeedFactor = 1;
   private baseDesiredSpeed: number;
   private lastObstacles: Obstacle[] = [];
 
@@ -334,7 +337,7 @@ export class Simulation {
     const aLatMax = 2.2;
     const k = this.path.maxCurvatureAhead(state.s, 100);
     const curveCap = k > 1e-4 ? Math.sqrt(aLatMax / k) : Infinity;
-    let target = Math.min(decision.targetSpeed, curveCap);
+    let target = Math.min(decision.targetSpeed * this.weatherSpeedFactor, curveCap);
 
     // Traffic-light stop-line: stop at the line on red (and yellow if we can).
     for (const lt of this.trafficLights) {
@@ -383,6 +386,28 @@ export class Simulation {
   setControlMode(m: ControlMode): void {
     if (m !== this.controlMode) this.metrics.reset(); // fresh scorecard per driver
     this.controlMode = m;
+  }
+
+  /** Adverse weather degrades the sensor AND makes the ego drive more cautiously. */
+  setWeather(w: Weather): void {
+    this.weather = w;
+    const s = this.sensor.config;
+    if (w === "rain") {
+      s.range = 68;
+      s.dropout = 0.1;
+      s.posNoise = 0.6;
+      this.weatherSpeedFactor = 0.8;
+    } else if (w === "fog") {
+      s.range = 46;
+      s.dropout = 0.07;
+      s.posNoise = 0.5;
+      this.weatherSpeedFactor = 0.62;
+    } else {
+      s.range = 95;
+      s.dropout = 0.04;
+      s.posNoise = 0.35;
+      this.weatherSpeedFactor = 1;
+    }
   }
   setCollecting(on: boolean): void {
     this.collecting = on;
