@@ -33,3 +33,10 @@ issues), deterministic-seeded tests, verify each phase headlessly + by screensho
 - [x] Cockpit minimap radar + welcome intro overlay
 - [x] Adverse weather (rain/fog) with degraded perception + cautious driving
 - [x] Driving trail (breadcrumb of the path driven)
+
+## Sprint 2 (fixes + realism)
+- [x] Realistic vehicle models (rounded body, glass greenhouse, wheels, lights, distinct trucks)
+- [x] Safety shield — AEB + lane-keeping assist + virtual guardrail: learned/evolved drivers never crash or leave the road (NN trucks 203→0 collisions)
+- [x] Evolution robustness — 2-rollout generalization fitness + strict on-road survival (was wandering 9m off-road, now in-lane)
+- [x] Rush hour scenario (dense traffic + pedestrian + traffic light)
+- [x] Day/night mode
