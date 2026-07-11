@@ -22,6 +22,7 @@ import { Sensor, SensableObject } from "../perception/Sensor.ts";
 import { Tracker, Track } from "../perception/Tracker.ts";
 import { OccupancyGrid } from "../perception/OccupancyGrid.ts";
 import { PedestrianManager } from "../pedestrian/PedestrianManager.ts";
+import { TrafficLight } from "../world/TrafficLight.ts";
 import { BehaviorPlanner, BehaviorState } from "../behavior/BehaviorPlanner.ts";
 import { ImitationAgent } from "../learn/ImitationAgent.ts";
 import { DriveContext, extractFeatures } from "../learn/features.ts";
@@ -64,6 +65,7 @@ export class Simulation {
   readonly tracker: Tracker;
   readonly occupancy: OccupancyGrid;
   readonly pedestrians: PedestrianManager;
+  trafficLights: TrafficLight[] = [];
   readonly behavior: BehaviorPlanner;
   readonly imitation: ImitationAgent;
   readonly metrics = new Metrics();
@@ -186,12 +188,19 @@ export class Simulation {
   private configureScenario(mid: number): void {
     const half = this.road.totalWidth / 2;
     this.pedestrians.clear();
+    this.trafficLights = [];
     switch (this.scenario) {
-      case "crossing":
+      case "crossing": {
         // A pedestrian using a crosswalk ahead — the ego must stop and yield.
         this.traffic.spawn(8);
         this.pedestrians.add({ s: 115, fromD: half + 3, toD: -half - 3, speed: 1.4, wait: 1.5 });
+        // Keep the ego's lane clear on the approach so the crosswalk is never
+        // occluded by (or blocked behind) another vehicle.
+        const L = this.path.length;
+        const start = mod(115 - 70, L);
+        this.traffic.cars = this.traffic.cars.filter((c) => !(mod(c.s - start, L) < 80 && c.lane === mid));
         break;
+      }
       case "occluded":
         // A pedestrian steps out from behind a stalled car — seen late. THE
         // textbook hard case for perception + emergency braking.
@@ -202,6 +211,11 @@ export class Simulation {
         // Someone darts across right in front of the ego with no warning.
         this.traffic.spawn(8);
         this.pedestrians.add({ s: 135, fromD: half + 3, toD: -half - 3, speed: 2.6, triggerDist: 76 });
+        break;
+      case "lights":
+        // A signalised intersection: the ego must stop on red, go on green.
+        this.traffic.spawn(8);
+        this.trafficLights = [new TrafficLight(150, { green: 7, yellow: 2, red: 12, offset: 8 })];
         break;
       case "stalled": {
         this.traffic.spawnScenario("stalled", mid);
@@ -320,7 +334,22 @@ export class Simulation {
     const aLatMax = 2.2;
     const k = this.path.maxCurvatureAhead(state.s, 100);
     const curveCap = k > 1e-4 ? Math.sqrt(aLatMax / k) : Infinity;
-    this.planner.config.desiredSpeed = Math.max(6, Math.min(decision.targetSpeed, curveCap));
+    let target = Math.min(decision.targetSpeed, curveCap);
+
+    // Traffic-light stop-line: stop at the line on red (and yellow if we can).
+    for (const lt of this.trafficLights) {
+      const fwd = mod(lt.s - state.s, this.path.length);
+      if (fwd <= 0 || fwd > 90) continue;
+      const stopForLight = lt.state === "red" || (lt.state === "yellow" && fwd > 14);
+      if (stopForLight) {
+        const stopSpeed = Math.sqrt(2 * 2.3 * Math.max(fwd - 5, 0)); // brake early, stop ~5 m before line
+        if (stopSpeed < target) {
+          target = stopSpeed;
+          this.behaviorState = "STOP";
+        }
+      }
+    }
+    this.planner.config.desiredSpeed = Math.max(0, target);
 
     const t0 = performance.now();
     const result = this.planner.plan(state, obstacles, currentLane, decision.biasLane);
@@ -393,7 +422,11 @@ export class Simulation {
       const headingErr = wrapAngle(roadHeading - this.ego.yaw);
       const crossTrack = ff.d - targetLaneD; // +ve when ego is left of lane centre
       classicalSteer = stanleyControl(headingErr, crossTrack, this.ego.v, this.steerConfig);
-      targetSpeed = speedAtTime(this.plan, 0.8);
+      // Never target above the current desired-speed cap, so a stop command
+      // (red light / yield / emergency) takes effect without the look-ahead lag.
+      // Never target above the current desired-speed cap, so a stop command
+      // (red light / yield / emergency) takes effect without the look-ahead lag.
+      targetSpeed = Math.min(speedAtTime(this.plan, 0.8), this.planner.config.desiredSpeed);
     }
     const classicalAccel = this.speedPID.update(targetSpeed - this.ego.v, dt);
 
@@ -423,6 +456,7 @@ export class Simulation {
     const ef = this.path.toFrenet(this.ego.x, this.ego.y, this.lastEgoIndex);
     this.traffic.update(dt, { s: ef.s, d: ef.d, v: this.ego.v, length: EGO_DIMS.length });
     this.pedestrians.update(dt, ef.s, this.path.length);
+    for (const lt of this.trafficLights) lt.update(dt);
 
     // --- live metrics (safety / comfort / efficiency) -----------------------
     const Lm = this.path.length;

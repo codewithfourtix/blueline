@@ -81,8 +81,9 @@ export class HUD {
       OVERTAKE: "OVERTAKING",
       EMERGENCY: "EMERGENCY STOP",
       YIELD: "YIELDING — PEDESTRIAN",
+      STOP: "STOP — RED LIGHT",
     };
-    const emergency = t.behaviorState === "EMERGENCY";
+    const emergency = t.behaviorState === "EMERGENCY" || t.behaviorState === "STOP";
     const yielding = t.behaviorState === "YIELD";
     this.pill.classList.toggle("alert", emergency);
     this.pill.classList.toggle("warn", yielding);

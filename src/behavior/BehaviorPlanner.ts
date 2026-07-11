@@ -16,7 +16,7 @@ import { Road } from "../world/Road.ts";
 import { Obstacle } from "../planner/Trajectory.ts";
 import { wrapDiff, clamp, mod } from "../core/math.ts";
 
-export type BehaviorState = "CRUISE" | "FOLLOW" | "OVERTAKE" | "EMERGENCY" | "YIELD";
+export type BehaviorState = "CRUISE" | "FOLLOW" | "OVERTAKE" | "EMERGENCY" | "YIELD" | "STOP";
 
 export interface EgoState {
   s: number;
@@ -104,7 +104,7 @@ export class BehaviorPlanner {
     const roadHalf = this.road.totalWidth / 2;
     // Lower value = target speed drops sooner = the ego starts braking earlier
     // (the actual stop uses the vehicle's real max decel to catch the profile).
-    const brake = 4.5;
+    const brake = 3.0;
     let best = Infinity;
     for (const o of obstacles) {
       if (o.kind !== "ped") continue;
@@ -118,7 +118,7 @@ export class BehaviorPlanner {
       const onRoadAhead = Math.abs(o.d) < roadHalf + 1.5 && fwd < 40;
 
       if (inLaneNow || inLaneSoon || onRoadAhead) {
-        const stopDist = Math.max(fwd - 9, 0); // aim to stop ~9 m short
+        const stopDist = Math.max(fwd - 12, 0); // aim to stop ~12 m short of the ped
         best = Math.min(best, Math.sqrt(2 * brake * stopDist));
       }
     }
