@@ -1,8 +1,14 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/hero.jpg" width="100%" alt="Blueline — a self-driving car navigating a city loop, entirely in the browser: a Frenet lattice planner picks the green path, Stanley + PID steer it, a Kalman filter tracks the surrounding traffic." />
+  <a href="https://realblueline.vercel.app" title="Open the live Blueline simulator">
+    <img src="https://raw.githubusercontent.com/codewithfourtix/blueline/main/docs/media/hero.jpg" width="100%" alt="Blueline — a self-driving car navigating a city loop, entirely in the browser: a Frenet lattice planner picks the green path, Stanley + PID steer it, a Kalman filter tracks the surrounding traffic." />
+  </a>
 </p>
 
 <h1 align="center">▍&nbsp;B&nbsp;L&nbsp;U&nbsp;E&nbsp;L&nbsp;I&nbsp;N&nbsp;E</h1>
+
+<p align="center">
+  <a href="https://realblueline.vercel.app"><img src="https://img.shields.io/badge/▶__TRY_THE_LIVE_DEMO-1fd18b?style=for-the-badge&labelColor=0d0e11&color=1fd18b" alt="Try the live demo" height="34"/></a>
+</p>
 
 <p align="center">
   <b>A self-driving car that runs a <em>real autonomy stack</em> in your browser —<br/>
