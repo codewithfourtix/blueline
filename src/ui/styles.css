@@ -122,6 +122,12 @@ body,
   color: var(--bl-alert);
   box-shadow: 0 0 22px rgba(255, 90, 90, 0.25);
 }
+.autopill.warn {
+  border-color: rgba(255, 180, 32, 0.55);
+  background: rgba(255, 180, 32, 0.12);
+  color: #ffc861;
+  box-shadow: 0 0 22px rgba(255, 180, 32, 0.28);
+}
 .autopill .pulse {
   width: 8px;
   height: 8px;
