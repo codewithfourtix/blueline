@@ -9,7 +9,7 @@
 //   planning    -> FrenetPlanner picks the blue line (10 Hz)
 //   control     -> Pure Pursuit (steer) + PID (speed) track it (60 Hz)
 
-import { ReferencePath } from "../world/ReferencePath.ts";
+import { ReferencePath, FrenetPose } from "../world/ReferencePath.ts";
 import { Road } from "../world/Road.ts";
 import { DEFAULT_TRACK } from "../world/track.ts";
 import { Vehicle, EGO_DIMS } from "../vehicle/Vehicle.ts";
@@ -75,6 +75,7 @@ export class Simulation {
   controlMode: ControlMode = "classical";
   externalPolicy: Policy | null = null;
   evolvedChampion: MLP | null = null; // set by the UI after neuroevolution
+  safetyShieldEnabled = true; // AEB + LKA for learned drivers (off during evolution)
   collecting = false;
   weather: Weather = "clear";
   private weatherSpeedFactor = 1;
@@ -383,6 +384,28 @@ export class Simulation {
     return extractFeatures(ctx);
   }
 
+  /**
+   * Automatic emergency braking. Returns a hard-braking acceleration if any
+   * obstacle is imminently in the ego's path, else null. Used to shield the
+   * learned drivers from collisions.
+   */
+  private safetyShield(f: FrenetPose): number | null {
+    const L = this.path.length;
+    const laneHalf = this.road.laneWidth * 0.6;
+    let brake: number | null = null;
+    for (const o of this.lastObstacles) {
+      const fwd = mod(o.s - f.s, L);
+      if (fwd <= 0 || fwd > 42) continue;
+      const latTol = laneHalf + (o.kind === "ped" ? 1.6 : 0.4);
+      if (Math.abs(o.d - f.d) > latTol) continue;
+      const gap = fwd - (2.35 + o.length / 2);
+      const closing = this.ego.v - o.v;
+      const ttc = closing > 0.1 ? gap / closing : Infinity;
+      if (gap < 4.5 || ttc < 1.7) brake = -this.ego.maxDecel;
+    }
+    return brake;
+  }
+
   setControlMode(m: ControlMode): void {
     if (m !== this.controlMode) this.metrics.reset(); // fresh scorecard per driver
     this.controlMode = m;
@@ -472,10 +495,43 @@ export class Simulation {
       accel = a.accel;
     }
 
+    // Safety shield for the learned drivers — a real AV's independent monitor:
+    //   • Lane-keeping assist: blend toward the classical steer near the edge.
+    //   • Automatic emergency braking: hard-brake if a collision is imminent.
+    // A rough policy drives its own style but is never allowed to leave the road
+    // or hit anything.
+    if (this.controlMode !== "classical" && this.safetyShieldEnabled) {
+      const f = this.path.toFrenet(this.ego.x, this.ego.y, this.lastEgoIndex);
+      const roadHalf = this.road.totalWidth / 2;
+      const over = Math.abs(f.d) - (roadHalf - 2.2);
+      if (over > 0) {
+        // Blend strongly toward the classical steer, and ease off the throttle
+        // (coast, don't hard-brake) near the edge so the correction can catch it.
+        const blend = clamp(over / 1.6, 0, 1);
+        steer = steer * (1 - blend) + classicalSteer * blend;
+        if (Math.abs(f.d) > roadHalf - 0.8) accel = Math.min(accel, 0);
+      }
+      const shield = this.safetyShield(f);
+      if (shield !== null) accel = Math.min(accel, shield);
+    }
+
     const prevX = this.ego.x;
     const prevY = this.ego.y;
     this.ego.step(steer, accel, dt);
     this.distance += Math.hypot(this.ego.x - prevX, this.ego.y - prevY);
+
+    // Virtual guardrail for the learned drivers: keep them physically on the
+    // road (a scrappy evolved policy is never allowed to end up in the grass).
+    if (this.controlMode !== "classical" && this.safetyShieldEnabled) {
+      const fg = this.path.toFrenet(this.ego.x, this.ego.y, this.lastEgoIndex);
+      const lim = this.road.totalWidth / 2 - 0.3;
+      if (Math.abs(fg.d) > lim) {
+        const w = this.path.toCartesian(fg.s, Math.sign(fg.d) * lim);
+        this.ego.x = w.x;
+        this.ego.y = w.y;
+        this.ego.v *= 0.9; // scrub speed against the barrier
+      }
+    }
 
     // --- traffic ------------------------------------------------------------
     const ef = this.path.toFrenet(this.ego.x, this.ego.y, this.lastEgoIndex);
