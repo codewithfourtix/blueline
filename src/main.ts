@@ -17,6 +17,7 @@ import { PedestrianView } from "./render/PedestrianView.ts";
 import { HUD } from "./ui/HUD.ts";
 import { ControlPanel } from "./ui/ControlPanel.ts";
 import { LearningPanel } from "./ui/LearningPanel.ts";
+import { Scorecard } from "./ui/Scorecard.ts";
 
 function boot(): void {
   const canvas = document.getElementById("scene") as HTMLCanvasElement;
@@ -53,6 +54,7 @@ function boot(): void {
   scene.add(tracksView.object);
 
   const hud = new HUD(uiRoot);
+  const scorecard = new Scorecard(uiRoot, sim);
   // eslint-disable-next-line no-new
   new LearningPanel(uiRoot, sim);
   // eslint-disable-next-line no-new
@@ -94,6 +96,7 @@ function boot(): void {
     sensorView.update(sim.ego.x, sim.ego.y, sim.sensor.config.range);
     scene.updateCamera(sim.ego.x, sim.ego.y, sim.ego.yaw, delta);
     hud.update(sim.telemetry, sim.road.numLanes);
+    scorecard.update();
     scene.render();
 
     if (firstFrame && loading) {
