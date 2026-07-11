@@ -9,6 +9,7 @@
 
 import { Mat, Vec, add, identity, inv2, mul, mulVec, sub, transpose } from "../core/mat.ts";
 import { Detection } from "./Sensor.ts";
+import { ObstacleKind } from "../planner/Trajectory.ts";
 
 const H: Mat = [
   [1, 0, 0, 0],
@@ -26,6 +27,7 @@ export class Track {
   confirmed = false;
   length: number;
   width: number;
+  kind: ObstacleKind;
 
   private sigmaA = 3.0; // process (acceleration) noise
   private measVar: number;
@@ -41,6 +43,7 @@ export class Track {
     ];
     this.length = det.length;
     this.width = det.width;
+    this.kind = det.kind;
     this.measVar = measNoise * measNoise;
   }
 
@@ -85,6 +88,7 @@ export class Track {
     // Smooth the reported extent a touch.
     this.length += (det.length - this.length) * 0.3;
     this.width += (det.width - this.width) * 0.3;
+    this.kind = det.kind;
     this.hits++;
     this.misses = 0;
   }

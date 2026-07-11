@@ -29,11 +29,15 @@ export interface FrenetState {
   index: number; // nearest reference-sample hint
 }
 
+export type ObstacleKind = "car" | "ped";
+
 // Lightweight obstacle used for the planner's forward collision prediction.
 export interface Obstacle {
   s: number;
   d: number;
-  v: number;
+  v: number; // along-road velocity
+  vd: number; // lateral velocity (crossing pedestrians move in d)
   length: number;
   width: number;
+  kind: ObstacleKind;
 }

@@ -57,8 +57,8 @@ export const DEFAULT_PLANNER: PlannerConfig = {
   kBias: 6.0,
   kProximity: 40.0,
   kOffCenter: 0.4,
-  lonMargin: 3.5,
-  latMargin: 0.9,
+  lonMargin: 4.0,
+  latMargin: 1.1,
 };
 
 const COLLISION_COST = 1e6;
@@ -162,20 +162,29 @@ export class FrenetPlanner {
       const world = this.road.path.toCartesian(s, d);
       points.push({ t, s, d, x: world.x, y: world.y, v: sDot });
 
-      // Collision / proximity against predicted traffic.
+      // Collision / proximity against predicted traffic. Obstacles are rolled
+      // forward using BOTH along-road (v) and lateral (vd) velocity, so a
+      // crossing pedestrian's future position in the lane is anticipated.
       for (const ob of obstacles) {
         const obS = ob.s + ob.v * t;
+        // Lateral prediction only for pedestrians (they keep crossing); a car
+        // mid-lane-change settles after one lane, so predict it at constant d.
+        const obD = ob.kind === "ped" ? ob.d + ob.vd * t : ob.d;
         const ds = wrapDiff(s, obS, L);
-        const dd = d - ob.d;
-        const lonReach = 2.35 + ob.length / 2 + cfg.lonMargin; // ego half-len ~2.35
-        const latReach = 1.0 + ob.width / 2 + cfg.latMargin; // ego half-width ~1.0
+        const dd = d - obD;
+        // Pedestrians get a bigger safety bubble than vehicles.
+        const extra = ob.kind === "ped" ? 1.5 : 0;
+        const lonReach = 2.35 + ob.length / 2 + cfg.lonMargin + extra;
+        const latReach = 1.0 + ob.width / 2 + cfg.latMargin + extra;
         if (Math.abs(ds) < lonReach && Math.abs(dd) < latReach) {
           colliding = true;
         }
-        // Soft proximity term: only cars roughly ahead & nearby matter.
-        if (ds > -6 && ds < 35 && Math.abs(dd) < 4) {
+        // Soft proximity term: only things in (roughly) OUR lane should slow us.
+        // A car safely in the next lane must not make us crawl past it.
+        const proxLat = ob.kind === "ped" ? 4.0 : 3.0;
+        if (ds > -6 && ds < 40 && Math.abs(dd) < proxLat) {
           const gap = Math.max(Math.abs(ds) - lonReach, 0.5);
-          proximityCost += 1 / gap;
+          proximityCost += (ob.kind === "ped" ? 2.5 : 1) / gap;
         }
       }
     }
