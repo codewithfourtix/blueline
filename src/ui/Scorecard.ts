@@ -9,7 +9,7 @@ import { benchmarkDrivers, DriverSpec, BenchResult } from "../learn/Benchmark.ts
 
 function scoreColor(v: number): string {
   if (v >= 80) return "#4ade80";
-  if (v >= 60) return "#5fb0ff";
+  if (v >= 60) return "#5fe6ad";
   if (v >= 40) return "#ffc861";
   return "#ff5a5a";
 }

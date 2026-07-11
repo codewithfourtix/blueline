@@ -1,13 +1,13 @@
 :root {
-  --bl-bg: #0e141e;
-  --bl-panel: rgba(18, 26, 40, 0.72);
-  --bl-panel-solid: #121a28;
-  --bl-border: rgba(90, 107, 140, 0.22);
-  --bl-blue: #2e8bff;
-  --bl-blue-bright: #5fb0ff;
-  --bl-text: #e8edf6;
-  --bl-text-dim: #8b98af;
-  --bl-alert: #ff5a5a;
+  --bl-bg: #191b1f;
+  --bl-panel: rgba(28, 30, 34, 0.74);
+  --bl-panel-solid: #1c1e22;
+  --bl-border: rgba(120, 126, 134, 0.22);
+  --bl-blue: #1fd18b;
+  --bl-blue-bright: #5fe6ad;
+  --bl-text: #e9ebe9;
+  --bl-text-dim: #8b9099;
+  --bl-alert: #ff6a4d;
 }
 
 * {
@@ -107,13 +107,13 @@ body,
   gap: 8px;
   padding: 7px 16px;
   border-radius: 999px;
-  border: 1px solid rgba(46, 139, 255, 0.5);
-  background: rgba(46, 139, 255, 0.12);
+  border: 1px solid rgba(31, 209, 139, 0.5);
+  background: rgba(31, 209, 139, 0.12);
   color: var(--bl-blue-bright);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 2px;
-  box-shadow: 0 0 22px rgba(46, 139, 255, 0.25);
+  box-shadow: 0 0 22px rgba(31, 209, 139, 0.25);
   transition: all 0.3s ease;
 }
 .autopill.alert {
@@ -205,7 +205,7 @@ input[type="range"] {
   appearance: none;
   height: 4px;
   border-radius: 4px;
-  background: #223049;
+  background: #2b2e34;
   outline: none;
 }
 input[type="range"]::-webkit-slider-thumb {
@@ -215,7 +215,7 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 50%;
   background: var(--bl-blue);
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(46, 139, 255, 0.6);
+  box-shadow: 0 0 10px rgba(31, 209, 139, 0.6);
 }
 input[type="range"]::-moz-range-thumb {
   width: 15px;
@@ -247,16 +247,16 @@ button.bl {
   font-weight: 600;
   letter-spacing: 0.5px;
   color: var(--bl-text);
-  background: #1a2536;
+  background: #24262b;
   border: 1px solid var(--bl-border);
   border-radius: 9px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
-button.bl:hover { background: #223049; }
+button.bl:hover { background: #2b2e34; }
 button.bl.active {
-  background: rgba(46, 139, 255, 0.16);
-  border-color: rgba(46, 139, 255, 0.5);
+  background: rgba(31, 209, 139, 0.16);
+  border-color: rgba(31, 209, 139, 0.5);
   color: var(--bl-blue-bright);
 }
 
@@ -272,7 +272,7 @@ button.bl.active {
   width: 38px;
   height: 21px;
   border-radius: 999px;
-  background: #223049;
+  background: #2b2e34;
   cursor: pointer;
   transition: background 0.2s ease;
 }
@@ -329,20 +329,20 @@ button.bl.active {
   height: 44px;
   margin-bottom: 8px;
   border-radius: 6px;
-  background: rgba(10, 16, 26, 0.5);
+  background: rgba(15, 16, 19, 0.5);
 }
 .neural-bar {
   height: 6px;
   border-radius: 6px;
-  background: #1a2536;
+  background: #24262b;
   overflow: hidden;
 }
 .neural-fill {
   height: 100%;
   width: 0%;
   border-radius: 6px;
-  background: linear-gradient(90deg, #2e8bff, #5fb0ff);
-  box-shadow: 0 0 10px rgba(46, 139, 255, 0.6);
+  background: linear-gradient(90deg, #1fd18b, #5fe6ad);
+  box-shadow: 0 0 10px rgba(31, 209, 139, 0.6);
   transition: width 0.2s ease;
 }
 .neural-stat {
@@ -379,7 +379,7 @@ button.bl.active {
   cursor: pointer;
 }
 .seg-btn.active {
-  background: rgba(46, 139, 255, 0.18);
+  background: rgba(31, 209, 139, 0.18);
   color: var(--bl-blue-bright);
 }
 .seg-btn.disabled {
@@ -455,7 +455,7 @@ button.bl.active {
   flex: 1;
   height: 6px;
   border-radius: 6px;
-  background: #1a2536;
+  background: #24262b;
   overflow: hidden;
 }
 .score-fill {
@@ -592,7 +592,7 @@ button.bl.active {
   font-weight: 700;
   letter-spacing: 6px;
   color: var(--bl-blue-bright);
-  text-shadow: 0 0 22px rgba(46, 139, 255, 0.5);
+  text-shadow: 0 0 22px rgba(31, 209, 139, 0.5);
 }
 .intro-tag {
   margin: 12px auto 22px;
@@ -655,7 +655,7 @@ button.bl.active {
   font-weight: 700;
   letter-spacing: 8px;
   color: var(--bl-blue-bright);
-  text-shadow: 0 0 24px rgba(46, 139, 255, 0.5);
+  text-shadow: 0 0 24px rgba(31, 209, 139, 0.5);
 }
 .loading-sub {
   margin-top: 12px;

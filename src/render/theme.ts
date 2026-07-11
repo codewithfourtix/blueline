@@ -1,52 +1,51 @@
-// Blueline visual language — modelled on the Tesla FSD screen.
-// The defining idea: a cool NAVY-BLUE world (never pure black), with a
-// distinctly LIGHTER neutral-grey road that pops against it, crisp white lane
-// lines, clean light-grey vehicles, and one confident electric blue reserved
-// for the ego + its planned path (which then blooms).
+// Blueline visual language — a clean, NON-BLUE dark theme. The world is neutral
+// dark grey (no navy tint), the road a neutral grey, and the single accent is a
+// confident teal-green reserved for the ego + its planned path (which then
+// blooms). Vehicles stay light grey; lane lines crisp white.
 
 export const THEME = {
-  // Scene — the background is a vertical gradient built in Scene.ts from these.
-  bgTop: 0x0e141e,
-  bgHorizon: 0x243650,
-  background: 0x141d2b,
-  fog: 0x1c2942,
-  ground: 0x172231,
-  grid: 0x2f4058,
+  // Scene — neutral dark-grey gradient world (built in Scene.ts from these).
+  bgTop: 0x101114,
+  bgHorizon: 0x2b2e34,
+  background: 0x191b1f,
+  fog: 0x1d1f23,
+  ground: 0x202227,
+  grid: 0x363940,
 
-  // Road — a distinctly LIGHTER neutral grey that reads against the blue world.
-  asphalt: 0x6b7280,
-  asphaltEdge: 0x3c414b,
-  shoulder: 0x2a3446,
-  laneLine: 0xe2e8f1,
-  edgeLine: 0xf2f5fa,
-  delineator: 0x6fd0ff,
+  // Road — neutral grey (no blue), clearly lighter than the ground.
+  asphalt: 0x4c4f56,
+  asphaltEdge: 0x3c3f45,
+  shoulder: 0x2c2f35,
+  laneLine: 0xe4e6ea,
+  edgeLine: 0xf3f4f6,
+  delineator: 0x3fe0a8,
   delineatorWarm: 0xffb44d,
 
-  // Ego + path (the one accent colour)
-  egoBlue: 0x2e8bff,
-  egoBlueBright: 0x5fb0ff,
-  pathBlue: 0x2e8bff,
-  pathBlueFaint: 0x1a4a7a,
+  // Ego + path — the one accent colour (teal-green).
+  egoBlue: 0x1fd18b,
+  egoBlueBright: 0x5fe6ad,
+  pathBlue: 0x1fd18b,
+  pathBlueFaint: 0x134e3a,
 
-  // Traffic — clean light grey, Tesla-style.
-  trafficBody: 0xc4ccd6,
-  trafficBodyDim: 0x9aa4b4,
-  trafficAlert: 0xff5a5a,
+  // Traffic — clean light grey.
+  trafficBody: 0xc6cace,
+  trafficBodyDim: 0x9ba0a6,
+  trafficAlert: 0xff6a4d,
 
   // Planner viz
-  candidate: 0x35507a,
-  candidateColliding: 0x7a2f42,
+  candidate: 0x3a4048,
+  candidateColliding: 0x6e3038,
 } as const;
 
 // CSS custom-property equivalents for the DOM HUD.
 export const CSS_VARS: Record<string, string> = {
-  "--bl-bg": "#0e141e",
-  "--bl-panel": "rgba(18, 26, 40, 0.72)",
-  "--bl-panel-solid": "#121a28",
-  "--bl-border": "rgba(90, 107, 140, 0.22)",
-  "--bl-blue": "#2e8bff",
-  "--bl-blue-bright": "#5fb0ff",
-  "--bl-text": "#e8edf6",
-  "--bl-text-dim": "#8b98af",
-  "--bl-alert": "#ff5a5a",
+  "--bl-bg": "#191b1f",
+  "--bl-panel": "rgba(28, 30, 34, 0.74)",
+  "--bl-panel-solid": "#1c1e22",
+  "--bl-border": "rgba(120, 126, 134, 0.22)",
+  "--bl-blue": "#1fd18b",
+  "--bl-blue-bright": "#5fe6ad",
+  "--bl-text": "#e9ebe9",
+  "--bl-text-dim": "#8b9099",
+  "--bl-alert": "#ff6a4d",
 };

@@ -157,7 +157,7 @@ export class LearningPanel {
       metric.textContent = `loss ${p.loss.toFixed(4)} · ${p.samples.toLocaleString()} samples`;
       if (p.loss > 0) {
         this.history.push(p.loss);
-        this.drawChart("#5fb0ff");
+        this.drawChart("#5fe6ad");
       }
     });
     this.sim.imitation.loadState(weights);
