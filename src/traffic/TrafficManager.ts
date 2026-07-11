@@ -29,7 +29,15 @@ export interface TrafficCar {
   cutInLane: number; // lane the cut-in car will swerve into
 }
 
-export type ScenarioName = "highway" | "dense" | "trucks" | "stalled" | "cutin";
+export type ScenarioName =
+  | "highway"
+  | "dense"
+  | "trucks"
+  | "stalled"
+  | "cutin"
+  | "crossing"
+  | "occluded"
+  | "jaywalker";
 
 export interface EgoSnapshot {
   s: number;
@@ -71,6 +79,8 @@ export class TrafficManager {
     for (let i = 0; i < attempts && placed < n; i++) {
       const lane = Math.floor(rand() * this.road.numLanes);
       const s = rand() * L;
+      // Keep the ego's start box (s ≈ 0) clear so nothing spawns on top of it.
+      if (s < 22 || s > L - 10) continue;
       // Reject if too close to an existing car in the same lane.
       let ok = true;
       for (const c of this.cars) {
@@ -125,11 +135,11 @@ export class TrafficManager {
         this.spawn(30);
         break;
       case "trucks": {
-        this.spawn(10);
-        // A convoy of slow trucks in the right lanes for the ego to overtake.
+        this.spawn(8);
+        // A convoy of slow trucks IN THE EGO'S LANE, so it must overtake them.
         for (let i = 0; i < 4; i++) {
-          const s = 60 + i * 55;
-          this.cars.push(this.make(0, s % L, 12, 13, 9 + i, 2.4, "truck"));
+          const s = 70 + i * 60;
+          this.cars.push(this.make(egoLane, s % L, 12, 13, 9 + i, 2.4, "truck"));
         }
         break;
       }

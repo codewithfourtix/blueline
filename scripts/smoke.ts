@@ -8,6 +8,14 @@
 import { Simulation } from "../src/sim/Simulation.ts";
 import type { ScenarioName } from "../src/traffic/TrafficManager.ts";
 
+// Deterministic RNG so the test is reproducible run-to-run (the app itself still
+// uses real Math.random). A seeded LCG replaces Math.random for the whole suite.
+let _seed = 987654321;
+Math.random = () => {
+  _seed = (_seed * 1664525 + 1013904223) >>> 0;
+  return _seed / 4294967296;
+};
+
 const EGO_HALF_LEN = 2.35;
 const EGO_HALF_W = 1.0;
 
@@ -30,6 +38,7 @@ interface Stats {
   laneChanges: number;
   maxTracked: number;
   crashes: number;
+  pedCrashes: number;
   maxAbsD: number;
   halfWidth: number;
   worst: Record<string, unknown>;
@@ -46,7 +55,7 @@ function run(scenario: ScenarioName, steps: number, desiredSpeed?: number): Stat
 
   const s: Stats = {
     km: 0, minV: Infinity, maxV: -Infinity, laneChanges: 0, maxTracked: 0,
-    crashes: 0, maxAbsD: 0, halfWidth, worst: {}, states: new Set(),
+    crashes: 0, pedCrashes: 0, maxAbsD: 0, halfWidth, worst: {}, states: new Set(),
   };
   let prevLane = sim.telemetry.lane;
 
@@ -74,10 +83,23 @@ function run(scenario: ScenarioName, steps: number, desiredSpeed?: number): Stat
     }
 
     for (const c of sim.traffic.cars) {
-      const ds = Math.abs(wrapDiff(c.s, ef.s, L));
+      const dsSigned = wrapDiff(c.s, ef.s, L);
+      const ds = Math.abs(dsSigned);
       const dd = Math.abs(c.d - ef.d);
-      if (ds < (EGO_HALF_LEN + c.length / 2) * 0.8 && dd < (EGO_HALF_W + c.width / 2) * 0.75) s.crashes++;
+      if (ds < (EGO_HALF_LEN + c.length / 2) * 0.8 && dd < (EGO_HALF_W + c.width / 2) * 0.75) {
+        s.crashes++;
+        if (!(s as any).firstCrash) {
+          (s as any).firstCrash = `step${i} car${c.id}/${c.kind} ${dsSigned > 0 ? "AHEAD" : "BEHIND"} ds=${dsSigned.toFixed(1)} dd=${dd.toFixed(1)} carV=${c.v.toFixed(1)} egoV=${sim.ego.v.toFixed(1)} egoLane=${sim.telemetry.lane} state=${sim.telemetry.behaviorState}`;
+        }
+      }
       if (![c.s, c.d, c.v].every(Number.isFinite)) fail(`[${scenario}] non-finite car ${c.id}`);
+    }
+
+    for (const p of sim.pedestrians.peds) {
+      if (p.state === "done") continue;
+      const ds = Math.abs(wrapDiff(p.s, ef.s, L));
+      const dd = Math.abs(p.d - ef.d);
+      if (ds < EGO_HALF_LEN + p.radius && dd < EGO_HALF_W + p.radius) s.pedCrashes++;
     }
   }
   s.km = sim.telemetry.distanceTravelled / 1000;
@@ -91,7 +113,8 @@ function report(name: string, s: Stats): void {
   console.log(`  lane changes     : ${s.laneChanges}`);
   console.log(`  behaviour states : ${[...s.states].join(", ")}`);
   console.log(`  max lateral |d|  : ${s.maxAbsD.toFixed(2)} m  (half-width ${s.halfWidth.toFixed(2)} m)`);
-  console.log(`  crash steps      : ${s.crashes}`);
+  console.log(`  vehicle crashes  : ${s.crashes}${(s as any).firstCrash ? "  → " + (s as any).firstCrash : ""}`);
+  console.log(`  pedestrian hits  : ${s.pedCrashes}`);
 }
 
 function assertOnRoad(name: string, s: Stats): void {
@@ -134,4 +157,14 @@ if (tr.crashes > 0) fail(`trucks: ego hit a truck (${tr.crashes} steps)`);
 if (tr.laneChanges < 1) fail("trucks: ego never overtook (no lane changes)");
 assertOnRoad("trucks", tr);
 
-console.log("\nSMOKE PASS — all scenarios: on-road, zero collisions.");
+// --- hard cases: pedestrians (crossing / occluded / jaywalker) --------------
+for (const sc of ["crossing", "occluded", "jaywalker"] as const) {
+  const r = run(sc, 2800);
+  report(sc, r);
+  if (r.pedCrashes > 0) fail(`${sc}: ego hit a pedestrian (${r.pedCrashes} steps)`);
+  if (r.crashes > 0) fail(`${sc}: ${r.crashes} vehicle collision steps`);
+  assertOnRoad(sc, r);
+  if (r.km < 0.25) fail(`${sc}: ego did not progress (${r.km.toFixed(2)} km) — stuck?`);
+}
+
+console.log("\nSMOKE PASS — all scenarios: on-road, zero collisions, pedestrians safe.");

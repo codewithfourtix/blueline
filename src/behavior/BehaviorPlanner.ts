@@ -14,9 +14,9 @@
 
 import { Road } from "../world/Road.ts";
 import { Obstacle } from "../planner/Trajectory.ts";
-import { wrapDiff, clamp } from "../core/math.ts";
+import { wrapDiff, clamp, mod } from "../core/math.ts";
 
-export type BehaviorState = "CRUISE" | "FOLLOW" | "OVERTAKE" | "EMERGENCY";
+export type BehaviorState = "CRUISE" | "FOLLOW" | "OVERTAKE" | "EMERGENCY" | "YIELD";
 
 export interface EgoState {
   s: number;
@@ -39,6 +39,12 @@ export class BehaviorPlanner {
   decide(ego: EgoState, obstacles: Obstacle[], baseSpeed: number): Decision {
     const L = this.road.path.length;
     const laneHalf = this.road.laneWidth * 0.6;
+
+    // ---- Pedestrians first: yield to any that are (or will be) in our path. --
+    const yieldSpeed = this.pedestrianYield(ego, obstacles, L, laneHalf);
+    if (yieldSpeed < baseSpeed) {
+      return { state: "YIELD", targetSpeed: Math.max(0, yieldSpeed), biasLane: ego.lane };
+    }
 
     // Nearest lead in the ego's own lane.
     let lead: { gap: number; v: number } | null = null;
@@ -89,6 +95,36 @@ export class BehaviorPlanner {
     return { state: "CRUISE", targetSpeed: target, biasLane: ego.lane };
   }
 
+  /**
+   * Speed the ego should slow to for pedestrians ahead — Infinity if none are a
+   * concern. Predicts each pedestrian's crossing so the ego stops in time, and
+   * is cautious about any pedestrian on the road surface ahead.
+   */
+  private pedestrianYield(ego: EgoState, obstacles: Obstacle[], L: number, laneHalf: number): number {
+    const roadHalf = this.road.totalWidth / 2;
+    // Lower value = target speed drops sooner = the ego starts braking earlier
+    // (the actual stop uses the vehicle's real max decel to catch the profile).
+    const brake = 4.5;
+    let best = Infinity;
+    for (const o of obstacles) {
+      if (o.kind !== "ped") continue;
+      const fwd = mod(o.s - ego.s, L);
+      if (fwd <= 0 || fwd > 80) continue;
+
+      const tReach = ego.v > 0.5 ? fwd / ego.v : 3;
+      const predD = o.d + o.vd * tReach;
+      const inLaneNow = Math.abs(o.d - ego.d) < laneHalf + 1.0;
+      const inLaneSoon = Math.abs(predD - ego.d) < laneHalf + 1.0;
+      const onRoadAhead = Math.abs(o.d) < roadHalf + 1.5 && fwd < 40;
+
+      if (inLaneNow || inLaneSoon || onRoadAhead) {
+        const stopDist = Math.max(fwd - 9, 0); // aim to stop ~9 m short
+        best = Math.min(best, Math.sqrt(2 * brake * stopDist));
+      }
+    }
+    return best;
+  }
+
   /** Is `lane` free of obstacles in a window around the ego (behind → ahead)? */
   private laneClear(ego: EgoState, obstacles: Obstacle[], lane: number, L: number): boolean {
     const dT = this.road.laneCenter(lane);
@@ -96,7 +132,7 @@ export class BehaviorPlanner {
     for (const o of obstacles) {
       if (Math.abs(o.d - dT) > laneHalf) continue;
       const ds = wrapDiff(o.s, ego.s, L);
-      if (ds > -12 && ds < 34) return false; // alongside or just ahead/behind
+      if (ds > -14 && ds < 40) return false; // alongside or just ahead/behind
     }
     return true;
   }

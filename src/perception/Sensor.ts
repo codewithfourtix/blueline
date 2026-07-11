@@ -1,24 +1,34 @@
-// Sensor — a simplified perception front-end. Instead of handing the planner
-// ground-truth traffic, the ego now only "sees" objects that are within sensor
-// range and not occluded by a nearer vehicle, and every measurement is corrupted
-// by Gaussian noise. This is what forces the rest of the stack (tracker →
-// prediction → planning) to cope with real, imperfect perception.
+// Sensor — a simplified perception front-end. Instead of ground-truth objects,
+// the ego only "sees" what is within range and not occluded by a nearer object,
+// every measurement is corrupted by Gaussian noise, and a fraction of detections
+// randomly drop out. Cars AND pedestrians flow through the same sensor, so the
+// downstream tracker/planner must cope with small, slow, laterally-moving,
+// sometimes-late (occluded) objects.
 
-import { TrafficCar } from "../traffic/TrafficManager.ts";
-import { ReferencePath } from "../world/ReferencePath.ts";
+import { ObstacleKind } from "../planner/Trajectory.ts";
+
+export interface SensableObject {
+  x: number;
+  y: number;
+  length: number;
+  width: number;
+  kind: ObstacleKind;
+}
 
 export interface Detection {
   x: number;
   y: number;
-  length: number; // measured extent (noisy)
+  length: number;
   width: number;
+  kind: ObstacleKind;
 }
 
 export interface SensorConfig {
-  range: number; // detection radius (m)
-  posNoise: number; // std-dev of position noise (m)
-  sizeNoise: number; // std-dev of size noise (m)
-  occlusion: boolean; // drop objects hidden behind a nearer one
+  range: number;
+  posNoise: number;
+  sizeNoise: number;
+  occlusion: boolean;
+  dropout: number; // probability [0,1] a given in-range detection is missed
 }
 
 export const DEFAULT_SENSOR: SensorConfig = {
@@ -26,9 +36,9 @@ export const DEFAULT_SENSOR: SensorConfig = {
   posNoise: 0.35,
   sizeNoise: 0.15,
   occlusion: true,
+  dropout: 0.04,
 };
 
-// Box–Muller standard normal.
 function randn(): number {
   let u = 0;
   let v = 0;
@@ -40,51 +50,55 @@ function randn(): number {
 export class Sensor {
   config: SensorConfig;
 
-  constructor(private path: ReferencePath, config: Partial<SensorConfig> = {}) {
+  constructor(config: Partial<SensorConfig> = {}) {
     this.config = { ...DEFAULT_SENSOR, ...config };
   }
 
-  /** Produce noisy detections of the cars the ego can currently perceive. */
-  sense(egoX: number, egoY: number, cars: TrafficCar[]): Detection[] {
+  /** Produce noisy detections of the objects the ego can currently perceive. */
+  sense(egoX: number, egoY: number, objects: SensableObject[]): Detection[] {
     const cfg = this.config;
 
-    // Gather in-range candidates with their true world positions & bearings.
-    const cand = cars
-      .map((c) => {
-        const w = this.path.toCartesian(c.s, c.d);
-        const dx = w.x - egoX;
-        const dy = w.y - egoY;
-        const dist = Math.hypot(dx, dy);
-        return { c, x: w.x, y: w.y, dist, bearing: Math.atan2(dy, dx) };
+    const cand = objects
+      .map((o) => {
+        const dx = o.x - egoX;
+        const dy = o.y - egoY;
+        return { o, dist: Math.hypot(dx, dy), bearing: Math.atan2(dy, dx) };
       })
-      .filter((o) => o.dist <= cfg.range)
+      .filter((c) => c.dist <= cfg.range)
       .sort((a, b) => a.dist - b.dist);
 
     const detections: Detection[] = [];
-    const takenBearings: { bearing: number; halfAngle: number }[] = [];
+    const blockers: { bearing: number; halfAngle: number }[] = [];
 
-    for (const o of cand) {
+    for (const c of cand) {
+      const o = c.o;
+      // Angular half-width this object subtends at its range.
+      const half = Math.atan2(Math.max(o.width, o.length) / 2, Math.max(c.dist, 1));
+
       if (cfg.occlusion) {
-        // Angular half-width this object subtends at its range.
-        const half = Math.atan2(Math.max(o.c.width, o.c.length) / 2, Math.max(o.dist, 1));
         let occluded = false;
-        for (const t of takenBearings) {
-          let db = Math.abs(o.bearing - t.bearing);
+        for (const b of blockers) {
+          let db = Math.abs(c.bearing - b.bearing);
           if (db > Math.PI) db = 2 * Math.PI - db;
-          if (db < t.halfAngle * 0.8) {
+          if (db < b.halfAngle * 0.8) {
             occluded = true;
             break;
           }
         }
-        takenBearings.push({ bearing: o.bearing, halfAngle: half });
+        // Only solid, wide objects (vehicles) meaningfully occlude.
+        if (o.kind === "car") blockers.push({ bearing: c.bearing, halfAngle: half });
         if (occluded) continue;
       }
+
+      // Random dropout of an otherwise-visible object.
+      if (Math.random() < cfg.dropout) continue;
 
       detections.push({
         x: o.x + randn() * cfg.posNoise,
         y: o.y + randn() * cfg.posNoise,
-        length: Math.max(3, o.c.length + randn() * cfg.sizeNoise),
-        width: Math.max(1.4, o.c.width + randn() * cfg.sizeNoise),
+        length: Math.max(0.5, o.length + randn() * cfg.sizeNoise),
+        width: Math.max(0.5, o.width + randn() * cfg.sizeNoise),
+        kind: o.kind,
       });
     }
     return detections;
