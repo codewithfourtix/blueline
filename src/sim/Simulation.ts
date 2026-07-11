@@ -18,11 +18,12 @@ import { stanleyControl, StanleyConfig } from "../control/Stanley.ts";
 import { TrafficManager, ScenarioName } from "../traffic/TrafficManager.ts";
 import { FrenetPlanner } from "../planner/FrenetPlanner.ts";
 import { FrenetState, Obstacle, Trajectory } from "../planner/Trajectory.ts";
-import { Sensor } from "../perception/Sensor.ts";
+import { Sensor, SensableObject } from "../perception/Sensor.ts";
 import { Tracker, Track } from "../perception/Tracker.ts";
 import { OccupancyGrid } from "../perception/OccupancyGrid.ts";
+import { PedestrianManager } from "../pedestrian/PedestrianManager.ts";
 import { BehaviorPlanner, BehaviorState } from "../behavior/BehaviorPlanner.ts";
-import { clamp, wrapAngle } from "../core/math.ts";
+import { clamp, wrapAngle, mod } from "../core/math.ts";
 import { DEFAULT_SIM, SimConfig } from "./config.ts";
 
 export interface Telemetry {
@@ -41,6 +42,7 @@ export interface Telemetry {
   sensorRange: number;
   usePerception: boolean;
   behaviorState: BehaviorState;
+  pedCount: number; // active pedestrians
 }
 
 export class Simulation {
@@ -53,6 +55,7 @@ export class Simulation {
   readonly sensor: Sensor;
   readonly tracker: Tracker;
   readonly occupancy: OccupancyGrid;
+  readonly pedestrians: PedestrianManager;
   readonly behavior: BehaviorPlanner;
   behaviorState: BehaviorState = "CRUISE";
   private baseDesiredSpeed: number;
@@ -93,9 +96,10 @@ export class Simulation {
       desiredSpeed: this.config.egoDesiredSpeed,
     });
 
-    this.sensor = new Sensor(this.path);
+    this.sensor = new Sensor();
     this.tracker = new Tracker();
     this.occupancy = new OccupancyGrid(50, 2);
+    this.pedestrians = new PedestrianManager(this.road);
     this.behavior = new BehaviorPlanner(this.road);
     this.baseDesiredSpeed = this.config.egoDesiredSpeed;
 
@@ -122,6 +126,7 @@ export class Simulation {
       sensorRange: this.sensor.config.range,
       usePerception: this.usePerception,
       behaviorState: "CRUISE",
+      pedCount: 0,
     };
 
     // Prime perception + the first plan so control has something on frame 1.
@@ -150,11 +155,58 @@ export class Simulation {
     this.speedPID.reset();
     this.distance = 0;
     this.lastEgoIndex = -1;
-    this.traffic.spawnScenario(this.scenario, mid);
+    this.configureScenario(mid);
     this.tracker.reset();
     this.tracks = [];
     this.perceive(this.config.fixedDt);
     this.replan();
+  }
+
+  /** Set up traffic AND pedestrians for the current scenario. */
+  private configureScenario(mid: number): void {
+    const half = this.road.totalWidth / 2;
+    this.pedestrians.clear();
+    switch (this.scenario) {
+      case "crossing":
+        // A pedestrian using a crosswalk ahead — the ego must stop and yield.
+        this.traffic.spawn(8);
+        this.pedestrians.add({ s: 115, fromD: half + 3, toD: -half - 3, speed: 1.4, wait: 1.5 });
+        break;
+      case "occluded":
+        // A pedestrian steps out from behind a stalled car — seen late. THE
+        // textbook hard case for perception + emergency braking.
+        this.traffic.spawnScenario("stalled", mid);
+        this.pedestrians.add({ s: 104, fromD: -(half + 3), toD: half + 3, speed: 1.7, wait: 0.6 });
+        break;
+      case "jaywalker":
+        // Someone darts across right in front of the ego with no warning.
+        this.traffic.spawn(8);
+        this.pedestrians.add({ s: 135, fromD: half + 3, toD: -half - 3, speed: 2.6, triggerDist: 76 });
+        break;
+      case "stalled": {
+        this.traffic.spawnScenario("stalled", mid);
+        // Guarantee a clear overtaking corridor beside the stalled car so the
+        // ego can reliably go around it (not get randomly boxed in).
+        const L = this.path.length;
+        const start = mod(95 - 22, L); // just behind the stalled car (~s=95)
+        this.traffic.cars = this.traffic.cars.filter(
+          (c) => c.kind === "stalled" || !(mod(c.s - start, L) < 70 && c.lane !== mid),
+        );
+        break;
+      }
+      case "trucks": {
+        this.traffic.spawnScenario("trucks", mid);
+        // Keep the lanes beside the convoy clear so the ego can pass reliably.
+        const L = this.path.length;
+        const start = mod(60, L);
+        this.traffic.cars = this.traffic.cars.filter(
+          (c) => c.kind === "truck" || !(mod(c.s - start, L) < 220 && c.lane !== mid),
+        );
+        break;
+      }
+      default:
+        this.traffic.spawnScenario(this.scenario, mid);
+    }
   }
 
   setScenario(name: ScenarioName): void {
@@ -189,23 +241,44 @@ export class Simulation {
   /** Obstacles the planner reasons about — perceived tracks or ground truth. */
   private obstacles(): Obstacle[] {
     if (!this.usePerception) {
-      return this.traffic.cars.map((c) => ({
-        s: c.s, d: c.d, v: c.v, length: c.length, width: c.width,
+      const obs: Obstacle[] = this.traffic.cars.map((c) => ({
+        s: c.s, d: c.d, v: c.v, vd: 0, length: c.length, width: c.width, kind: "car" as const,
       }));
+      for (const p of this.pedestrians.peds) {
+        if (p.state === "done") continue;
+        obs.push({
+          s: p.s, d: p.d, v: 0, vd: this.pedestrians.lateralVel(p),
+          length: p.radius * 2, width: p.radius * 2, kind: "ped",
+        });
+      }
+      return obs;
     }
     // Project each confirmed Kalman track into the road's Frenet frame, using
-    // its ESTIMATED velocity for the along-road speed (real prediction).
+    // its ESTIMATED velocity for both along-road and lateral (crossing) speed.
     return this.tracks.map((t) => {
       const f = this.path.toFrenet(t.px, t.py);
       const h = this.path.cartesianAt(f.s).heading;
-      const vAlong = t.vx * Math.cos(h) + t.vy * Math.sin(h);
-      return { s: f.s, d: f.d, v: vAlong, length: t.length, width: t.width };
+      const tx = Math.cos(h);
+      const ty = Math.sin(h);
+      const vAlong = t.vx * tx + t.vy * ty;
+      const vLat = -t.vx * ty + t.vy * tx; // component along the left normal
+      return { s: f.s, d: f.d, v: vAlong, vd: vLat, length: t.length, width: t.width, kind: t.kind };
     });
   }
 
   /** Run the perception pipeline: sensor → tracker → occupancy grid. */
   private perceive(dt: number): void {
-    const detections = this.sensor.sense(this.ego.x, this.ego.y, this.traffic.cars);
+    const objects: SensableObject[] = [];
+    for (const c of this.traffic.cars) {
+      const w = this.path.toCartesian(c.s, c.d);
+      objects.push({ x: w.x, y: w.y, length: c.length, width: c.width, kind: "car" });
+    }
+    for (const p of this.pedestrians.peds) {
+      if (p.state === "done") continue;
+      const w = this.path.toCartesian(p.s, p.d);
+      objects.push({ x: w.x, y: w.y, length: p.radius * 2, width: p.radius * 2, kind: "ped" });
+    }
+    const detections = this.sensor.sense(this.ego.x, this.ego.y, objects);
     this.tracks = this.tracker.update(detections, dt);
     this.occupancy.build(this.ego.x, this.ego.y, this.tracks);
   }
@@ -278,6 +351,7 @@ export class Simulation {
     // --- traffic ------------------------------------------------------------
     const ef = this.path.toFrenet(this.ego.x, this.ego.y, this.lastEgoIndex);
     this.traffic.update(dt, { s: ef.s, d: ef.d, v: this.ego.v, length: EGO_DIMS.length });
+    this.pedestrians.update(dt, ef.s, this.path.length);
 
     // --- telemetry ----------------------------------------------------------
     this.telemetry.speed = this.ego.v;
@@ -294,6 +368,7 @@ export class Simulation {
     this.telemetry.sensorRange = this.sensor.config.range;
     this.telemetry.usePerception = this.usePerception;
     this.telemetry.behaviorState = this.behaviorState;
+    this.telemetry.pedCount = this.pedestrians.peds.filter((p) => p.state !== "done").length;
   }
 }
 
