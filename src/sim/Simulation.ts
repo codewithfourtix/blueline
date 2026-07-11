@@ -25,7 +25,8 @@ import { PedestrianManager } from "../pedestrian/PedestrianManager.ts";
 import { BehaviorPlanner, BehaviorState } from "../behavior/BehaviorPlanner.ts";
 import { ImitationAgent } from "../learn/ImitationAgent.ts";
 import { DriveContext, extractFeatures } from "../learn/features.ts";
-import { clamp, wrapAngle, mod } from "../core/math.ts";
+import { Metrics } from "./Metrics.ts";
+import { clamp, wrapAngle, mod, wrapDiff } from "../core/math.ts";
 
 export type ControlMode = "classical" | "learned" | "external";
 export type Policy = (features: number[]) => { steer: number; accel: number };
@@ -64,6 +65,8 @@ export class Simulation {
   readonly pedestrians: PedestrianManager;
   readonly behavior: BehaviorPlanner;
   readonly imitation: ImitationAgent;
+  readonly metrics = new Metrics();
+  private prevDelta = 0;
   behaviorState: BehaviorState = "CRUISE";
   controlMode: ControlMode = "classical";
   externalPolicy: Policy | null = null;
@@ -171,6 +174,8 @@ export class Simulation {
     this.configureScenario(mid);
     this.tracker.reset();
     this.tracks = [];
+    this.metrics.reset();
+    this.prevDelta = 0;
     this.perceive(this.config.fixedDt);
     this.replan();
   }
@@ -345,6 +350,7 @@ export class Simulation {
   }
 
   setControlMode(m: ControlMode): void {
+    if (m !== this.controlMode) this.metrics.reset(); // fresh scorecard per driver
     this.controlMode = m;
   }
   setCollecting(on: boolean): void {
@@ -415,6 +421,34 @@ export class Simulation {
     const ef = this.path.toFrenet(this.ego.x, this.ego.y, this.lastEgoIndex);
     this.traffic.update(dt, { s: ef.s, d: ef.d, v: this.ego.v, length: EGO_DIMS.length });
     this.pedestrians.update(dt, ef.s, this.path.length);
+
+    // --- live metrics (safety / comfort / efficiency) -----------------------
+    const Lm = this.path.length;
+    let collided = false;
+    let minGap = Infinity;
+    const laneHalf = this.road.laneWidth * 0.6;
+    for (const c of this.traffic.cars) {
+      const ds = wrapDiff(c.s, ef.s, Lm);
+      const dd = c.d - ef.d;
+      if (Math.abs(ds) < (2.35 + c.length / 2) * 0.8 && Math.abs(dd) < (1.0 + c.width / 2) * 0.75) collided = true;
+      if (Math.abs(dd) < laneHalf && ds > 0) minGap = Math.min(minGap, ds - (2.35 + c.length / 2));
+    }
+    for (const p of this.pedestrians.peds) {
+      if (p.state === "done") continue;
+      if (Math.abs(wrapDiff(p.s, ef.s, Lm)) < 2.35 + p.radius && Math.abs(p.d - ef.d) < 1.0 + p.radius) collided = true;
+    }
+    const steerRate = (this.ego.delta - this.prevDelta) / dt;
+    this.prevDelta = this.ego.delta;
+    this.metrics.update({
+      v: this.ego.v,
+      accel: this.ego.a,
+      steerRate,
+      offRoad: Math.abs(ef.d) > this.road.totalWidth / 2,
+      gap: minGap,
+      collided,
+      desiredSpeed: this.baseDesiredSpeed,
+      dt,
+    });
 
     // --- telemetry ----------------------------------------------------------
     this.telemetry.speed = this.ego.v;
