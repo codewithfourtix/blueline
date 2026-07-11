@@ -374,6 +374,10 @@ button.bl.active {
   background: rgba(46, 139, 255, 0.18);
   color: var(--bl-blue-bright);
 }
+.seg-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 /* ---- Loading ---- */
 #loading {
