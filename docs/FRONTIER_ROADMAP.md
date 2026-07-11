@@ -16,7 +16,7 @@ implemented, built, smoke-tested, screenshot-verified, committed, then the next.
       MLP + Adam in pure TS; collect (state→action) from classical teacher; DAgger
       to fix covariate shift; in-browser Train button + Classical/Neural-Net toggle.
       Verified: NN drives 1.4 km on-road, 0 collisions.
-- [ ] **P2 — Neuroevolution (learn from scratch, no teacher)**
+- [x] **P2 — Neuroevolution (learn from scratch, no teacher)**
       Genetic algorithm evolving NN weights; fitness = rollout score; watch
       generations improve live; deploy champion as a driver.
 - [ ] **P3 — Analytics / scorecard**
