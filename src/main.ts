@@ -33,7 +33,7 @@ function boot(): void {
 
   // Allow deep-linking a scenario, e.g. ?scenario=crossing
   const wanted = new URLSearchParams(location.search).get("scenario");
-  const known = ["highway", "dense", "trucks", "stalled", "cutin", "crossing", "occluded", "jaywalker", "lights"];
+  const known = ["highway", "dense", "trucks", "stalled", "cutin", "crossing", "occluded", "jaywalker", "lights", "rush"];
   if (wanted && known.includes(wanted)) sim.setScenario(wanted as never);
   const wx = new URLSearchParams(location.search).get("weather");
 

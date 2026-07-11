@@ -38,7 +38,8 @@ export type ScenarioName =
   | "crossing"
   | "occluded"
   | "jaywalker"
-  | "lights";
+  | "lights"
+  | "rush";
 
 export interface EgoSnapshot {
   s: number;

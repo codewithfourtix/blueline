@@ -167,4 +167,12 @@ for (const sc of ["crossing", "occluded", "jaywalker"] as const) {
   if (r.km < 0.25) fail(`${sc}: ego did not progress (${r.km.toFixed(2)} km) — stuck?`);
 }
 
+// --- rush hour: dense traffic + pedestrian + traffic light, all at once ------
+const rush = run("rush", 3200);
+report("rush", rush);
+if (rush.pedCrashes > 0) fail(`rush: ego hit a pedestrian (${rush.pedCrashes} steps)`);
+if (rush.crashes > 0) fail(`rush: ${rush.crashes} vehicle collision steps`);
+assertOnRoad("rush", rush);
+if (rush.km < 0.3) fail(`rush: ego did not progress (${rush.km.toFixed(2)} km)`);
+
 console.log("\nSMOKE PASS — all scenarios: on-road, zero collisions, pedestrians safe.");

@@ -221,6 +221,18 @@ export class Simulation {
         this.traffic.spawn(8);
         this.trafficLights = [new TrafficLight(150, { green: 7, yellow: 2, red: 12, offset: 8 })];
         break;
+      case "rush": {
+        // Rush hour — everything at once: dense traffic, a pedestrian crossing,
+        // and a signalised intersection further on.
+        this.traffic.spawn(26);
+        this.pedestrians.add({ s: 95, fromD: half + 3, toD: -half - 3, speed: 1.4, wait: 2 });
+        this.trafficLights = [new TrafficLight(210, { green: 8, yellow: 2, red: 10, offset: 6 })];
+        // Keep the ego's lane clear at the crosswalk so the yield is unobstructed.
+        const L = this.path.length;
+        const start = mod(95 - 65, L);
+        this.traffic.cars = this.traffic.cars.filter((c) => !(mod(c.s - start, L) < 75 && c.lane === mid));
+        break;
+      }
       case "stalled": {
         this.traffic.spawnScenario("stalled", mid);
         // Guarantee a clear overtaking corridor beside the stalled car so the
