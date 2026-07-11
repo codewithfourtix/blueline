@@ -323,6 +323,14 @@ button.bl.active {
 .neural-prog {
   margin-top: 11px;
 }
+.nn-chart {
+  display: block;
+  width: 100%;
+  height: 44px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  background: rgba(10, 16, 26, 0.5);
+}
 .neural-bar {
   height: 6px;
   border-radius: 6px;
