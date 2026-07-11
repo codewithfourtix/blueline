@@ -10,6 +10,14 @@ export const STEER_NORM = 0.6; // rad — network steer output is scaled by this
 export const ACCEL_NORM = 7.0; // m/s² — network accel output is scaled by this
 export const FEATURE_SIZE = 16;
 
+/** Map a network's two raw outputs to a physical (steer, accel) action. */
+export function decodeAction(out: number[]): { steer: number; accel: number } {
+  return {
+    steer: clamp(out[0], -1.2, 1.2) * STEER_NORM,
+    accel: clamp(out[1], -1.2, 1.2) * ACCEL_NORM,
+  };
+}
+
 export interface DriveObstacle {
   s: number;
   d: number;
