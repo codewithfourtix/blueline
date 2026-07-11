@@ -37,8 +37,13 @@ client-side.
 - 🛣️ **Shares the road.** Ambient traffic runs the **Intelligent Driver Model
   (IDM)** for car-following and **MOBIL** for lane-change decisions — the
   standard models from traffic-flow research — and reacts to the ego too.
-- 🎬 **Scenarios.** One click to throw a **slow truck convoy**, a **stalled car**
-  in your lane, an **aggressive cut-in**, or **dense traffic** at the planner.
+- 🚸 **Yields to pedestrians.** A **YIELD** behaviour stops for people crossing —
+  including the textbook hard case of a pedestrian stepping out from behind a
+  **stalled car** (seen late through sensor occlusion) and a **jaywalker** darting
+  across (a full emergency stop).
+- 🎬 **Scenarios.** One click to throw a **slow truck convoy**, a **stalled car**,
+  an **aggressive cut-in**, **dense traffic**, a **pedestrian crossing**, an
+  **occluded pedestrian**, or a **jaywalker** at the planner.
 - 👁️ **Shows its thinking.** Toggle overlays for the planner's full candidate
   lattice, the perceived **track boxes + velocity vectors**, the **occupancy
   grid**, and the **sensor range** — watch the autonomy reason in real time.
@@ -115,9 +120,11 @@ decoupled from the render loop.
 - [x] **Sensor + Kalman tracking** perception (v2) — ego drives off estimates, not truth
 - [x] **Behaviour FSM** + adaptive-cruise following (v2)
 - [x] **Occupancy grid** + scenario library: trucks, stalled car, cut-in, dense (v2)
+- [x] **Vulnerable road users + hard cases** (v3): pedestrians, YIELD behaviour, and
+      the *crossing*, *occluded-pedestrian*, and *jaywalker* scenarios — with a
+      simulated sensor that has occlusion + dropout, so pedestrians can be seen late
 - [ ] Traffic lights + intersections + stop-line planning
 - [ ] A learned driving policy (imitation / RL) benchmarked against the classical planner
-- [ ] Recorded scenarios + a "hard cases" gallery
 
 ---
 
