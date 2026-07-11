@@ -383,6 +383,29 @@ export class Simulation {
     return extractFeatures(ctx);
   }
 
+  /**
+   * Automatic emergency braking. Returns a hard-braking acceleration if any
+   * obstacle is imminently in the ego's path, else null. Used to shield the
+   * learned drivers from collisions.
+   */
+  private safetyShield(): number | null {
+    const f = this.path.toFrenet(this.ego.x, this.ego.y, this.lastEgoIndex);
+    const L = this.path.length;
+    const laneHalf = this.road.laneWidth * 0.6;
+    let brake: number | null = null;
+    for (const o of this.lastObstacles) {
+      const fwd = mod(o.s - f.s, L);
+      if (fwd <= 0 || fwd > 42) continue;
+      const latTol = laneHalf + (o.kind === "ped" ? 1.6 : 0.4);
+      if (Math.abs(o.d - f.d) > latTol) continue;
+      const gap = fwd - (2.35 + o.length / 2);
+      const closing = this.ego.v - o.v;
+      const ttc = closing > 0.1 ? gap / closing : Infinity;
+      if (gap < 4.5 || ttc < 1.7) brake = -this.ego.maxDecel;
+    }
+    return brake;
+  }
+
   setControlMode(m: ControlMode): void {
     if (m !== this.controlMode) this.metrics.reset(); // fresh scorecard per driver
     this.controlMode = m;
@@ -470,6 +493,15 @@ export class Simulation {
       const a = this.externalPolicy(feat);
       steer = a.steer;
       accel = a.accel;
+    }
+
+    // Safety shield (automatic emergency braking): a real AV's independent
+    // monitor. It overrides ANY learned driver with hard braking when a
+    // collision is imminent — so a rough policy drives its own style but is
+    // never allowed to actually hit anything.
+    if (this.controlMode !== "classical") {
+      const shield = this.safetyShield();
+      if (shield !== null) accel = Math.min(accel, shield);
     }
 
     const prevX = this.ego.x;
