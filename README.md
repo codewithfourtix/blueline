@@ -168,6 +168,115 @@ exactly why every claim below is a passing test, not a screenshot.
 
 <br/><br/>
 
+<h2 align="center">📐 The mathematics behind the blue line</h2>
+
+<p align="center">
+  Every box in that diagram is a real equation the car solves ~60 times a second.<br/>
+  Here is the whole stack, straight from the source — nothing hand-waved.
+</p>
+
+### 🛣 Geometry — the Frenet frame
+
+The world is re-expressed along the road: station $s$ (distance along) and lateral offset $d$ (distance off centre). A world point, and the road's curvature, are
+
+$$\mathbf{p}(s,d) = \mathbf{c}(s) + d\,\mathbf{n}(s), \qquad \mathbf{n}(s) = \big(-\sin\theta(s),\ \cos\theta(s)\big)$$
+
+$$\kappa(s) = \left|\frac{d\theta}{ds}\right| \approx \frac{\big|\,\theta(s+\Delta s) - \theta(s-\Delta s)\,\big|}{2\,\Delta s}$$
+
+so the car knows precisely how hard to slow for a bend, capping speed at the lateral-acceleration limit $a^{\text{lat}}_{\max}=2.2\ \mathrm{m/s^2}$:
+
+$$v_{\max}(s) = \sqrt{\frac{a^{\text{lat}}_{\max}}{\kappa(s)}}$$
+
+<sub>→ <code>world/ReferencePath.ts</code> · <code>sim/Simulation.ts</code></sub>
+
+### 🧭 Planning — the Werling Frenet lattice
+
+Each frame samples a lattice of manoeuvres. Lateral motion is a **quintic** (six boundary conditions — position, velocity *and* acceleration pinned at both ends); longitudinal is a **quartic** (terminal position left free):
+
+$$d(t) = \sum_{i=0}^{5} a_i\,t^i, \qquad\qquad s(t) = \sum_{i=0}^{4} b_i\,t^i$$
+
+Every candidate is scored, and the car draws the **arg-min**:
+
+$$J = \underbrace{k_j\!\int_0^T\!\big(\dddot{d}^2 + \dddot{s}^2\big)\,dt + k_t\,T}_{\text{comfort}} \;+\; \underbrace{k_v\,(v_d - v_T)^2}_{\text{speed}} \;+\; \underbrace{k_{lc}\,|\ell - \ell_0| + k_b\,|\ell - \ell^{*}|}_{\text{lane}} \;+\; \underbrace{k_p\!\!\sum_{\text{obstacles}}\!\frac{1}{\text{gap}}}_{\text{proximity}}$$
+
+<sub>colliding candidates take a $+10^6$ penalty, dynamically-infeasible ones $+10^5$ → <code>planner/FrenetPlanner.ts</code> · <code>core/poly.ts</code></sub>
+
+### 🚗 Traffic — IDM + MOBIL
+
+Ambient cars follow the **Intelligent Driver Model** — a desired gap, and an acceleration that closes it:
+
+$$s^{*}(v,\Delta v) = s_0 + \max\!\left(0,\ vT + \frac{v\,\Delta v}{2\sqrt{ab}}\right), \qquad a_{\text{IDM}} = a\left[\,1 - \left(\frac{v}{v_0}\right)^{\!\delta} - \left(\frac{s^{*}}{s}\right)^{\!2}\,\right]$$
+
+and change lanes by **MOBIL** only when the net incentive beats a threshold — never braking the new follower past $b_{\text{safe}}$:
+
+$$\Delta a_{\text{self}} + p\,\big(\Delta a_{\text{new}} + \Delta a_{\text{old}}\big) + a_{\text{bias}} \;>\; \Delta a_{\text{th}}$$
+
+<sub>→ <code>traffic/IDM.ts</code> · <code>traffic/MOBIL.ts</code></sub>
+
+### 🕹 Control — Stanley + PID + bicycle
+
+Steering drives **both** the heading error $\psi_e$ and the cross-track error $e$ to zero:
+
+$$\delta = \psi_e + \arctan\!\left(\frac{k\,e}{v + k_{\text{soft}}}\right)$$
+
+Speed is a PID on the target-speed error; the vehicle itself is a **kinematic bicycle** — nonholonomic, "can't slide sideways":
+
+$$u = k_p\,e + k_i\!\int\! e\,dt + k_d\,\dot e \qquad\qquad \dot x = v\cos\psi,\quad \dot y = v\sin\psi,\quad \dot\psi = \frac{v}{L}\tan\delta,\quad \dot v = a$$
+
+<sub>→ <code>control/Stanley.ts</code> · <code>control/PID.ts</code> · <code>vehicle/Vehicle.ts</code></sub>
+
+### 👁 Perception — the Kalman filter
+
+Each tracked object is a constant-velocity state $\mathbf{x} = [\,p_x,\,p_y,\,v_x,\,v_y\,]^{\top}$, smoothed by a Kalman filter that **predicts**, then **corrects** against the noisy detection $\mathbf{z}$:
+
+$$\hat{\mathbf{x}}^{-} = F\hat{\mathbf{x}}, \qquad P^{-} = F P F^{\top} + Q$$
+
+$$\mathbf{y} = \mathbf{z} - H\hat{\mathbf{x}}^{-}, \qquad S = H P^{-} H^{\top} + R, \qquad K = P^{-} H^{\top} S^{-1}$$
+
+$$\hat{\mathbf{x}} = \hat{\mathbf{x}}^{-} + K\mathbf{y}, \qquad P = (I - K H)\,P^{-}$$
+
+<sub>the ego plans off the estimate, never ground truth → <code>perception/Tracker.ts</code></sub>
+
+### 🧠 Learning — MLP, backprop, Adam
+
+The neural driver is a tanh MLP with a linear head, trained to minimise MSE against the expert's action:
+
+$$a^{(l)} = \tanh\!\big(W^{(l)}a^{(l-1)} + b^{(l)}\big), \qquad \mathcal{L} = \frac{1}{2N}\sum_{n} \big\lVert\, a^{(L)}_n - y_n \,\big\rVert^2$$
+
+Gradients flow back through the tanh, and **Adam** takes the step:
+
+$$\delta^{(L)} = a^{(L)} - y, \qquad \delta^{(l)} = \big(W^{(l+1)\top}\delta^{(l+1)}\big)\odot\big(1 - a^{(l)}\!\odot a^{(l)}\big)$$
+
+$$m \leftarrow \beta_1 m + (1-\beta_1)g, \quad v \leftarrow \beta_2 v + (1-\beta_2)g^2, \qquad \theta \leftarrow \theta - \frac{\eta\,\hat{m}}{\sqrt{\hat{v}} + \epsilon}$$
+
+<sub>β₁=0.9, β₂=0.999, ε=10⁻⁸, Xavier init, tanh′ = 1−a² → <code>learn/NN.ts</code></sub>
+
+### 🧬 Evolution — survival of the fittest driver
+
+With **no teacher**, genomes are scored by the *worst of two* rollouts (so the winner must generalise, not memorise), then bred by tournament selection + uniform crossover + annealed Gaussian mutation:
+
+$$\mathcal{F}(\theta) = \min_{r\in\{1,2\}}\ \sum_{t}\Big(\,\underbrace{v_t\,\Delta t}_{\text{progress}} - 0.6\max(0,\,|d_t|-2)\,\Delta t\,\Big) \;-\; \text{penalty}_{\text{crash / off-road}}$$
+
+$$\sigma_g = 0.25\left(1 - \frac{g}{G}\right) + 0.03 \qquad \text{(mutation scale, annealed over generations)}$$
+
+<sub>→ <code>learn/Evolution.ts</code></sub>
+
+### 📊 The scorecard
+
+And all three drivers are ranked on one honest scale:
+
+$$\text{safety} = 100 - 30\,n_{\text{col}} - 120\,f_{\text{off-road}} - 5\max(0,\,6 - g_{\min})$$
+
+$$\text{comfort} = 100 - 14\,\overline{|a|} - 5\,\overline{|j|}, \qquad\quad \text{efficiency} = 100\cdot\frac{\bar{v}}{v_d}$$
+
+$$\text{overall} = 0.5\,\text{safety} + 0.25\,\text{comfort} + 0.25\,\text{efficiency}$$
+
+<sub>→ <code>sim/Metrics.ts</code></sub>
+
+<p align="center"><sub><b>Geometry to gradients — that's the whole car, ~6,400 lines of it.</b></sub></p>
+
+<br/><br/>
+
 <h2 align="center">🧠 The <em>learned</em> drivers — no ML library</h2>
 
 <p align="center">
